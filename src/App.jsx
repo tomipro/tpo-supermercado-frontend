@@ -8,6 +8,8 @@ function App() {
 
   return (
     <>
+      <h1>TPO Supermercado Aplicaciones Interactivas</h1>
+      <h2>Grupo 4</h2>
       <div>
         <a href="https://vite.dev" target="_blank">
           <img src={viteLogo} className="logo" alt="Vite logo" />
