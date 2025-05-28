@@ -134,8 +134,29 @@ const destacados = [
 	},
 ]
 
+// Imagen fallback para productos y categorías
+const FALLBACK_IMG = "https://cdn-icons-png.flaticon.com/512/1046/1046857.png"
+
+function ProductCardWithFallback(props) {
+	const [imgSrc, setImgSrc] = useState(props.img || FALLBACK_IMG)
+	return (
+		<ProductCard
+			{...props}
+			img={imgSrc}
+			onErrorImg={FALLBACK_IMG}
+			// Pasar onError para que ProductCard lo use si lo implementa
+		/>
+	)
+}
+
 function Carousel() {
 	const [idx, setIdx] = useState(0)
+	const [imgSrc, setImgSrc] = useState(carouselData[0].img)
+
+	useEffect(() => {
+		setImgSrc(carouselData[idx].img)
+	}, [idx])
+
 	const next = () => setIdx((idx + 1) % carouselData.length)
 	const prev = () => setIdx((idx - 1 + carouselData.length) % carouselData.length)
 	// Auto-slide
@@ -145,12 +166,13 @@ function Carousel() {
 		return () => clearInterval(timer)
 	}, [idx])
 
-	const { img, title, desc, cta, to } = carouselData[idx]
+	const { title, desc, cta, to } = carouselData[idx]
 	return (
 		<div className="relative w-full h-[220px] sm:h-[320px] md:h-[400px] rounded-2xl overflow-hidden shadow-lg mb-10">
 			<img
-				src={img}
+				src={imgSrc}
 				alt={title}
+				onError={() => setImgSrc(FALLBACK_IMG)}
 				className="absolute inset-0 w-full h-full object-cover object-center"
 			/>
 			<div className="absolute inset-0 bg-gradient-to-r from-primary/80 via-primary/60 to-transparent" />
@@ -161,7 +183,12 @@ function Carousel() {
 				<p className="mb-4 text-base sm:text-lg">{desc}</p>
 				<Link
 					to={to}
-					className="inline-block bg-accent text-dark font-semibold px-5 py-2 rounded-lg shadow hover:bg-secondary hover:text-white transition"
+					className="inline-block font-semibold px-6 py-3 rounded-lg shadow-lg bg-white/90 text-primary border-2 border-primary hover:bg-primary hover:text-white hover:border-white transition text-lg"
+					style={{
+						boxShadow: '0 4px 24px 0 rgba(0,0,0,0.10)',
+						fontWeight: 700,
+						letterSpacing: '0.02em'
+					}}
 				>
 					{cta}
 				</Link>
@@ -193,14 +220,16 @@ function Carousel() {
 }
 
 function CategoryCard({ name, img, to }) {
+	const [imgSrc, setImgSrc] = useState(img)
 	return (
 		<Link
 			to={to}
 			className="flex flex-col items-center bg-white rounded-xl shadow hover:shadow-xl transition group p-3 sm:p-4 border border-gray-100 hover:border-primary"
 		>
 			<img
-				src={img}
+				src={imgSrc}
 				alt={name}
+				onError={() => setImgSrc(FALLBACK_IMG)}
 				className="w-16 h-16 sm:w-20 sm:h-20 object-cover rounded-full mb-2 border-2 border-accent group-hover:scale-105 transition"
 			/>
 			<span className="text-base sm:text-lg font-medium text-dark group-hover:text-primary transition text-center">
@@ -317,6 +346,34 @@ function ProductQuickView({ product, onClose }) {
 	)
 }
 
+function PromotionsCard({ img, title, desc, cta, to }) {
+	const [imgSrc, setImgSrc] = useState(img)
+	return (
+		<div className="bg-white rounded-2xl shadow-lg hover:shadow-xl transition overflow-hidden flex flex-col">
+			<img
+				src={imgSrc}
+				alt={title}
+				onError={() => setImgSrc(FALLBACK_IMG)}
+				className="w-full h-40 object-cover object-center"
+			/>
+			<div className="p-6 flex flex-col flex-1">
+				<h3 className="text-lg sm:text-xl font-bold mb-2 text-primary">
+					{title}
+				</h3>
+				<p className="text-gray-700 text-base sm:text-lg mb-4 flex-1">
+					{desc}
+				</p>
+				<Link
+					to={to}
+					className="inline-block bg-accent text-dark font-semibold px-4 py-2 rounded-lg shadow hover:bg-secondary hover:text-white transition"
+				>
+					{cta}
+				</Link>
+			</div>
+		</div>
+	)
+}
+
 export default function HomePage() {
 	const [quickView, setQuickView] = useState(null)
 	return (
@@ -345,30 +402,7 @@ export default function HomePage() {
 				</h2>
 				<div className="grid grid-cols-1 md:grid-cols-3 gap-8">
 					{promos.map(promo => (
-						<div
-							key={promo.title}
-							className="bg-white rounded-2xl shadow-lg hover:shadow-xl transition overflow-hidden flex flex-col"
-						>
-							<img
-								src={promo.img}
-								alt={promo.title}
-								className="w-full h-40 object-cover object-center"
-							/>
-							<div className="p-6 flex flex-col flex-1">
-								<h3 className="text-lg sm:text-xl font-bold mb-2 text-primary">
-									{promo.title}
-								</h3>
-								<p className="text-gray-700 text-base sm:text-lg mb-4 flex-1">
-									{promo.desc}
-								</p>
-								<Link
-									to={promo.to}
-									className="inline-block bg-accent text-dark font-semibold px-4 py-2 rounded-lg shadow hover:bg-secondary hover:text-white transition"
-								>
-									{promo.cta}
-								</Link>
-							</div>
-						</div>
+						<PromotionsCard key={promo.title} {...promo} />
 					))}
 				</div>
 			</div>
@@ -378,12 +412,28 @@ export default function HomePage() {
 				<h2 className="text-2xl sm:text-3xl font-semibold mb-6 text-dark">
 					Productos destacados
 				</h2>
-				<div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-4 lg:grid-cols-8 gap-6 auto-rows-fr">
-					{destacados.map(prod => (
-						<div key={prod.name} className="flex h-full min-h-[100%]">
-							<ProductCard {...prod} onQuickView={setQuickView} />
-						</div>
-					))}
+				<div className="relative">
+					{/* Mobile: slider horizontal con scroll snap */}
+					<div className="flex gap-4 overflow-x-auto pb-2 sm:hidden"
+						style={{ scrollSnapType: 'x mandatory', WebkitOverflowScrolling: 'touch' }}>
+						{destacados.map(prod => (
+							<div
+								key={prod.name}
+								className="min-w-[220px] max-w-[240px] flex-shrink-0 flex h-full"
+								style={{ scrollSnapAlign: 'center' }}
+							>
+								<ProductCardWithFallback {...prod} onQuickView={setQuickView} />
+							</div>
+						))}
+					</div>
+					{/* Desktop: masonry-like grid */}
+					<div className="hidden sm:grid grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-x-8 gap-y-10 auto-rows-[1fr]">
+						{destacados.map(prod => (
+							<div key={prod.name} className="flex h-full min-h-0">
+								<ProductCardWithFallback {...prod} onQuickView={setQuickView} />
+							</div>
+						))}
+					</div>
 				</div>
 			</div>
 			<ProductQuickView product={quickView} onClose={() => setQuickView(null)} />

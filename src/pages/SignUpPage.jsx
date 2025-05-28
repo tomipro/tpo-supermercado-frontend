@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 
 export default function SignUpPage() {
   const [username, setUsername] = useState("");
@@ -71,9 +71,30 @@ export default function SignUpPage() {
   return (
     <form
       onSubmit={handleRegister}
-      className="max-w-md mx-auto mt-20 p-6 bg-white shadow rounded"
+      className="max-w-md mx-auto mt-20 p-6 bg-white shadow rounded relative"
     >
-      <h2 className="text-xl font-bold mb-4">Crear cuenta</h2>
+      {/* Link a login arriba */}
+      <Link
+        to="/signin"
+        className="absolute left-4 top-4 flex items-center gap-1 text-primary hover:text-secondary text-sm font-semibold"
+        tabIndex={0}
+      >
+        <svg
+          className="w-4 h-4 rotate-180"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth={2}
+          viewBox="0 0 24 24"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            d="M7 16l-4-4m0 0l4-4m-4 4h18"
+          />
+        </svg>
+        Iniciar sesión
+      </Link>
+      <h2 className="text-xl font-bold mb-4 text-center">Crear cuenta</h2>
 
       {errorMsg && (
         <div className="mb-4 text-red-600 text-center bg-red-100 p-2 rounded">
@@ -127,6 +148,15 @@ export default function SignUpPage() {
       >
         Registrarse
       </button>
+      <p className="mt-4 text-center text-sm text-gray-600">
+        ¿Ya tenés cuenta?{" "}
+        <Link
+          to="/signin"
+          className="text-primary hover:text-secondary font-semibold"
+        >
+          Iniciá sesión acá
+        </Link>
+      </p>
     </form>
   );
 }

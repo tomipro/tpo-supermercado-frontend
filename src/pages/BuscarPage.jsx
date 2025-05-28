@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useLocation } from 'react-router-dom'
 import ProductCard from '../components/ProductCard'
 
 // todo esto se  va cuando integramos backend.. osea hariamos un fetch de estas cosas
@@ -121,8 +121,14 @@ function ProductQuickView({ product, onClose }) {
 	)
 }
 
+function useQueryParam(name) {
+	const { search } = useLocation()
+	return new URLSearchParams(search).get(name) || ''
+}
+
 export default function BuscarPage() {
-	const [query, setQuery] = useState('')
+	const searchParam = useQueryParam('search')
+	const [query, setQuery] = useState(searchParam)
 	const [marcas, setMarcas] = useState([])
 	const [precioMin, setPrecioMin] = useState('')
 	const [precioMax, setPrecioMax] = useState('')
@@ -131,6 +137,11 @@ export default function BuscarPage() {
 	const [subcategorias, setSubcategorias] = useState([])
 	const [sortBy, setSortBy] = useState('relevancia')
 	const [quickView, setQuickView] = useState(null)
+
+	// Si cambia el parámetro de la URL, actualiza el input y el filtro
+	useEffect(() => {
+		setQuery(searchParam)
+	}, [searchParam])
 
 	// Subcategorías disponibles según categorías seleccionadas
 	const subcategoriasDisponibles = CATEGORIAS
@@ -145,13 +156,13 @@ export default function BuscarPage() {
 		{ nombre: 'Coca-Cola 2L', marca: 'Coca-Cola', precio: 1200, promo: true, categoria: 'bebidas', sub: 'Sin alcohol' },
 		// ...más productos...
 	].filter(p => 
-		(!query || p.nombre.toLowerCase().includes(query.toLowerCase())) &&
-		(marcas.length === 0 || marcas.includes(p.marca)) &&
-		(categorias.length === 0 || categorias.includes(p.categoria)) &&
-		(subcategorias.length === 0 || subcategorias.includes(p.sub)) &&
-		(!promo || p.promo) &&
-		(!precioMin || p.precio >= Number(precioMin)) &&
-		(!precioMax || p.precio <= Number(precioMax))
+		(!query || p.nombre.toLowerCase().includes(query.toLowerCase()) || (p.marca && p.marca.toLowerCase().includes(query.toLowerCase())))
+		&& (marcas.length === 0 || marcas.includes(p.marca))
+		&& (categorias.length === 0 || categorias.includes(p.categoria))
+		&& (subcategorias.length === 0 || subcategorias.includes(p.sub))
+		&& (!promo || p.promo)
+		&& (!precioMin || p.precio >= Number(precioMin))
+		&& (!precioMax || p.precio <= Number(precioMax))
 	).sort((a, b) => {
 		if (sortBy === 'precio-asc') return a.precio - b.precio
 		if (sortBy === 'precio-desc') return b.precio - a.precio

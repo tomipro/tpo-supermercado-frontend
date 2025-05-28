@@ -71,9 +71,30 @@ export default function SignInPage() {
   return (
     <form
       onSubmit={handleLogin}
-      className="max-w-md mx-auto mt-20 p-6 bg-white shadow rounded"
+      className="max-w-md mx-auto mt-20 p-6 bg-white shadow rounded relative"
     >
-      <h2 className="text-xl font-bold mb-4">Iniciar sesión</h2>
+      {/* Link a registro arriba */}
+      <Link
+        to="/signup"
+        className="absolute left-4 top-4 flex items-center gap-1 text-primary hover:text-secondary text-sm font-semibold"
+        tabIndex={0}
+      >
+        <svg
+          className="w-4 h-4"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth={2}
+          viewBox="0 0 24 24"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            d="M7 16l-4-4m0 0l4-4m-4 4h18"
+          />
+        </svg>
+        Crear cuenta
+      </Link>
+      <h2 className="text-xl font-bold mb-4 text-center">Iniciar sesión</h2>
       <input
         type="text"
         placeholder="Usuario"
@@ -108,7 +129,13 @@ export default function SignInPage() {
         </Link>
       </p>
       <p className="mt-4 text-center text-sm text-gray-600">
-        ¿No tenés cuenta? <Link to="/signup">Registrate acá</Link>
+        ¿No tenés cuenta?{" "}
+        <Link
+          to="/signup"
+          className="text-primary hover:text-secondary font-semibold"
+        >
+          Registrate acá
+        </Link>
       </p>
     </form>
   );
