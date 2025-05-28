@@ -1,8 +1,10 @@
 import { Link, NavLink, useNavigate } from 'react-router-dom'
 import { useState } from 'react'
-
+import { useAuth } from '../auth/AuthProvider' 
 // todas estas cosas vuelan cuando integro con el back
 // osea provisorio por ahora
+
+
 
 const categoriesDropdown = [
   { name: 'Ver todos', to: '/categorias' },
@@ -36,6 +38,8 @@ export default function Navbar() {
   const [dropdown, setDropdown] = useState(null)
   const [mobileDropdown, setMobileDropdown] = useState(null)
   const navigate = useNavigate()
+  //Esto permite que el navbar sepa si el usuario está autenticado y quién es
+  const { usuario, isAuthenticated, logout } = useAuth();
 
   function handleSearchSubmit(e) {
     e.preventDefault()
@@ -148,12 +152,26 @@ export default function Navbar() {
           >
             <span className="text-2xl text-secondary">🛒</span>
           </NavLink>
+          {isAuthenticated ? (
+          <div className="hidden sm:flex items-center gap-2">
+            <span className="text-sm text-gray-600 font-medium">
+              Hola, {usuario.nombre} ({usuario.rol})
+            </span>
+            <button
+              onClick={logout}
+              className="px-4 py-2 rounded-full font-semibold bg-red-500 text-white hover:bg-red-600 transition shadow"
+            >
+              Cerrar sesión
+            </button>
+          </div>
+        ) : (
           <NavLink
-            to="/signin"
-            className="hidden sm:inline px-4 py-2 rounded-full font-semibold bg-primary text-white hover:bg-secondary transition-all duration-200 shadow focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+              to="/signin"
+              className="hidden sm:inline px-4 py-2 rounded-full font-semibold bg-primary text-white hover:bg-secondary transition-all duration-200 shadow"
           >
             Ingresar
           </NavLink>
+)}
           {/* Mobile menu button */}
           <button
             className="md:hidden ml-2 p-2 rounded-full hover:bg-accent/60 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
