@@ -10,6 +10,8 @@ import AdminPanelPage from "./pages/AdminPanelPage";
 import BuscarPage from "./pages/BuscarPage";
 import ResetPasswordPage from "./pages/ResetPasswordPage";
 import ProtectedRoute from "./pages/ProtectedRoute";
+import ProfilePage from "./pages/ProfilePage";
+import ResetPasswordPageLog from "./pages/ResetPasswordPageLog";
 import "./App.css";
 
 function App() {
@@ -28,6 +30,11 @@ function App() {
           <Route element={<ProtectedRoute />}>
             <Route path="/carrito" element={<CartPage />} />
             <Route path="/admin" element={<AdminPanelPage />} />
+            <Route path="/perfil" element={<ProfilePage />} />
+            <Route
+              path="/cambiar-contrasena"
+              element={<ResetPasswordPageLog />}
+            />
           </Route>
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
