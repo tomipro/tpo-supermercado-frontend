@@ -2,139 +2,6 @@ import { Link } from 'react-router-dom'
 import { useState, useEffect } from 'react'
 import ProductCard from '../components/ProductCard'
 
-// cuando integramos con back, se van estas cosas hardcodeadas
-
-const carouselData = [
-	{
-		img: 'https://images.unsplash.com/photo-1504674900247-0877df9cc836?auto=format&fit=crop&w=1200&q=80',
-		title: '¡Super Ofertas de la Semana!',
-		desc: 'Aprovechá descuentos exclusivos en cientos de productos.',
-		cta: 'Ver promociones',
-		to: '/promociones',
-	},
-	{
-		img: 'https://images.unsplash.com/photo-1519864600265-abb23847ef2c?auto=format&fit=crop&w=1200&q=80',
-		title: 'Envío gratis en compras mayores a $15.000',
-		desc: 'Recibí tu compra en casa sin cargo.',
-		cta: 'Ver condiciones',
-		to: '/',
-	},
-	{
-		img: 'https://images.unsplash.com/photo-1464306076886-debca5e8a6b0?auto=format&fit=crop&w=1200&q=80',
-		title: '¡Registrate y obtené 10% OFF!',
-		desc: 'Solo para nuevos usuarios. ¡No te lo pierdas!',
-		cta: 'Registrarse',
-		to: '/signup',
-	},
-]
-
-const categories = [
-	{
-		name: 'Verdulería',
-		to: '/categorias?cat=verduleria',
-		img: 'https://images.unsplash.com/photo-1502741338009-cac2772e18bc?auto=format&fit=crop&w=200&q=80',
-	},
-	{
-		name: 'Carnes',
-		to: '/categorias?cat=carnes',
-		img: 'https://images.unsplash.com/photo-1519864600265-abb23847ef2c?auto=format&fit=crop&w=200&q=80',
-	},
-	{
-		name: 'Lácteos',
-		to: '/categorias?cat=lacteos',
-		img: 'https://images.unsplash.com/photo-1464306076886-debca5e8a6b0?auto=format&fit=crop&w=200&q=80',
-	},
-	{
-		name: 'Panadería',
-		to: '/categorias?cat=panaderia',
-		img: 'https://images.unsplash.com/photo-1519864600265-abb23847ef2c?auto=format&fit=crop&w=200&q=80',
-	},
-	{
-		name: 'Snacks',
-		to: '/categorias?cat=snacks',
-		img: 'https://images.unsplash.com/photo-1504674900247-0877df9cc836?auto=format&fit=crop&w=200&q=80',
-	},
-	{
-		name: 'Bebidas',
-		to: '/categorias?cat=bebidas',
-		img: 'https://images.unsplash.com/photo-1464306076886-debca5e8a6b0?auto=format&fit=crop&w=200&q=80',
-	},
-	{
-		name: 'Limpieza',
-		to: '/categorias?cat=limpieza',
-		img: 'https://images.unsplash.com/photo-1519864600265-abb23847ef2c?auto=format&fit=crop&w=200&q=80',
-	},
-	{
-		name: 'Cuidado personal',
-		to: '/categorias?cat=cuidado-personal',
-		img: 'https://images.unsplash.com/photo-1502741338009-cac2772e18bc?auto=format&fit=crop&w=200&q=80',
-	},
-]
-
-const promos = [
-	{
-		img: 'https://images.unsplash.com/photo-1502741338009-cac2772e18bc?auto=format&fit=crop&w=400&q=80',
-		title: '2x1 en Gaseosas',
-		desc: 'Solo por esta semana, llevá 2 y pagá 1 en todas las gaseosas seleccionadas.',
-		cta: 'Ver productos',
-		to: '/promociones',
-	},
-	{
-		img: 'https://images.unsplash.com/photo-1519864600265-abb23847ef2c?auto=format&fit=crop&w=400&q=80',
-		title: '20% OFF en Frutas y Verduras',
-		desc: 'Comé saludable con descuento en productos frescos.',
-		cta: 'Comprar ahora',
-		to: '/categorias?cat=verduleria',
-	},
-	{
-		img: 'https://images.unsplash.com/photo-1464306076886-debca5e8a6b0?auto=format&fit=crop&w=400&q=80',
-		title: 'Envío gratis',
-		desc: 'En compras mayores a $15.000, el envío es gratis a todo el país.',
-		cta: 'Ver más',
-		to: '/',
-	},
-]
-
-const destacados = [
-	{
-		name: 'Manzana Roja',
-		img: 'https://images.unsplash.com/photo-1567306226416-28f0efdc88ce?auto=format&fit=crop&w=200&q=80',
-		price: 500,
-		brand: 'La Huerta',
-		weight: '1kg',
-		offer: '10% OFF',
-		bestSeller: true,
-	},
-	{
-		name: 'Leche Entera',
-		img: 'https://images.unsplash.com/photo-1519864600265-abb23847ef2c?auto=format&fit=crop&w=200&q=80',
-		price: 800,
-		brand: 'La Serenísima',
-		weight: '1L',
-		offer: null,
-		bestSeller: false,
-	},
-	{
-		name: 'Pan Integral',
-		img: 'https://images.unsplash.com/photo-1504674900247-0877df9cc836?auto=format&fit=crop&w=200&q=80',
-		price: 650,
-		brand: 'Bimbo',
-		weight: '500g',
-		offer: 'Nuevo',
-		bestSeller: false,
-	},
-	{
-		name: 'Bife de Chorizo',
-		img: 'https://images.unsplash.com/photo-1464306076886-debca5e8a6b0?auto=format&fit=crop&w=200&q=80',
-		price: 2500,
-		brand: 'Carnes Premium',
-		weight: '500g',
-		offer: null,
-		bestSeller: true,
-	},
-]
-
-// Imagen fallback para productos y categorías
 const FALLBACK_IMG = "https://cdn-icons-png.flaticon.com/512/1046/1046857.png"
 
 function ProductCardWithFallback(props) {
@@ -150,24 +17,22 @@ function ProductCardWithFallback(props) {
 	)
 }
 
-function Carousel() {
+function Carousel({ banners }) {
 	const [idx, setIdx] = useState(0)
-	const [imgSrc, setImgSrc] = useState(carouselData[0].img)
+	const [imgSrc, setImgSrc] = useState(banners[0]?.img || FALLBACK_IMG)
 
 	useEffect(() => {
-		setImgSrc(carouselData[idx].img)
-	}, [idx])
+		setImgSrc(banners[idx]?.img || FALLBACK_IMG)
+	}, [idx, banners])
 
-	const next = () => setIdx((idx + 1) % carouselData.length)
-	const prev = () => setIdx((idx - 1 + carouselData.length) % carouselData.length)
-	// Auto-slide
-	// eslint-disable-next-line
-	useState(() => {
+	const next = () => setIdx((idx + 1) % banners.length)
+	const prev = () => setIdx((idx - 1 + banners.length) % banners.length)
+	useEffect(() => {
 		const timer = setInterval(next, 6000)
 		return () => clearInterval(timer)
-	}, [idx])
+	}, [idx, banners])
 
-	const { title, desc, cta, to } = carouselData[idx]
+	const { title, desc, cta, to } = banners[idx] || {}
 	return (
 		<div className="relative w-full h-[220px] sm:h-[320px] md:h-[400px] rounded-2xl overflow-hidden shadow-lg mb-10">
 			<img
@@ -182,17 +47,19 @@ function Carousel() {
 					{title}
 				</h2>
 				<p className="mb-4 text-base sm:text-lg">{desc}</p>
-				<Link
-					to={to}
-					className="inline-block font-semibold px-6 py-3 rounded-lg shadow-lg bg-white/90 text-primary border-2 border-primary hover:bg-primary hover:text-white hover:border-white transition text-lg"
-					style={{
-						boxShadow: '0 4px 24px 0 rgba(0,0,0,0.10)',
-						fontWeight: 700,
-						letterSpacing: '0.02em'
-					}}
-				>
-					{cta}
-				</Link>
+				{to && cta && (
+					<Link
+						to={to}
+						className="inline-block font-semibold px-6 py-3 rounded-lg shadow-lg bg-white/90 text-primary border-2 border-primary hover:bg-primary hover:text-white hover:border-white transition text-lg"
+						style={{
+							boxShadow: '0 4px 24px 0 rgba(0,0,0,0.10)',
+							fontWeight: 700,
+							letterSpacing: '0.02em'
+						}}
+					>
+						{cta}
+					</Link>
+				)}
 			</div>
 			<button
 				onClick={prev}
@@ -207,7 +74,7 @@ function Carousel() {
 				<span className="text-2xl">&#8594;</span>
 			</button>
 			<div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-2">
-				{carouselData.map((_, i) => (
+				{banners.map((_, i) => (
 					<span
 						key={i}
 						className={`block w-3 h-3 rounded-full ${
@@ -251,12 +118,14 @@ function PromotionsCard({ img, title, desc, cta, to }) {
 			/>
 			<div className="font-bold text-lg text-dark mb-1 text-center">{title}</div>
 			<div className="text-sm text-muted mb-3 text-center">{desc}</div>
-			<Link
-				to={to}
-				className="bg-primary hover:bg-secondary text-white px-4 py-2 rounded font-semibold text-sm shadow transition"
-			>
-				{cta}
-			</Link>
+			{to && cta && (
+				<Link
+					to={to}
+					className="bg-primary hover:bg-secondary text-white px-4 py-2 rounded font-semibold text-sm shadow transition"
+				>
+					{cta}
+				</Link>
+			)}
 		</div>
 	)
 }
@@ -277,14 +146,16 @@ function ProductQuickView({ product, onClose }) {
 
 	if (!product) return null;
 
-	const stock = 12;
-	const description = 'Producto seleccionado por su frescura y calidad. Ideal para tu mesa diaria. Aprovechá esta oferta exclusiva online.';
-
-	// Unificar nombres para HomePage y BuscarPage
-	const price = product.price !== undefined ? product.price : product.precio;
-	const name = product.name || product.nombre;
-	const brand = product.brand || product.marca;
-	const img = product.img;
+	const stock = product.stock ?? 0;
+	const description = product.descripcion || "";
+	const price = product.precio;
+	const name = product.nombre;
+	const brand = product.marca;
+	const img =
+		(Array.isArray(product.imagenes) && product.imagenes[0]?.imagen)
+		|| (Array.isArray(product.imagenes) && typeof product.imagenes[0] === "string" && product.imagenes[0])
+		|| product.imagenUrl
+		|| product.img;
 
 	function handleBgClick(e) {
 		if (e.target === e.currentTarget) onClose();
@@ -301,7 +172,7 @@ function ProductQuickView({ product, onClose }) {
 				<div className="flex-1 flex items-center justify-center bg-gray-50 p-6 md:p-8">
 					{img ? (
 						<img
-							src={Array.isArray(img) ? img[0] : img}
+							src={img}
 							alt={name}
 							className="w-40 h-40 md:w-56 md:h-56 object-cover rounded-xl shadow-lg transition-transform duration-300 hover:scale-105"
 							draggable={false}
@@ -323,36 +194,28 @@ function ProductQuickView({ product, onClose }) {
 					</button>
 					<div className="flex items-center gap-2 mb-2">
 						<span className="font-bold text-xl text-dark">{name}</span>
-						{product.offer && (
+						{product.descuento > 0 && (
 							<span className="bg-accent text-dark text-xs font-bold px-2 py-0.5 rounded-full shadow">
-								{product.offer}
-							</span>
-						)}
-						{product.promo && (
-							<span className="bg-accent text-dark text-xs font-bold px-2 py-0.5 rounded-full shadow">
-								Promo
-							</span>
-						)}
-						{product.bestSeller && (
-							<span className="bg-secondary text-white text-xs font-bold px-2 py-0.5 rounded-full shadow">
-								Más vendido
+								{product.descuento}% OFF
 							</span>
 						)}
 					</div>
 					<div className="text-sm text-muted mb-1">
-						{brand} {product.weight && `· ${product.weight}`}
+						{brand}
 					</div>
 					<div className="text-primary font-bold text-2xl mb-1">
-						${price}
+						{price !== undefined ? `$${price}` : ""}
 					</div>
 					<div className="text-xs text-gray-400 mb-3">
-						Precio sin impuestos nacionales: ${price ? Math.round(price / 1.21) : 0}
+						{price !== undefined ? `Precio sin impuestos nacionales: $${Math.round(price / 1.21)}` : ""}
 					</div>
-					<div className="text-gray-600 text-sm mb-4">{description}</div>
+					{description && (
+						<div className="text-gray-600 text-sm mb-4">{description}</div>
+					)}
 					<div className="flex items-center gap-3 mb-4">
-						<span className="text-xs font-medium text-secondary">En stock</span>
-						<span className="text-xs text-gray-400">|</span>
-						<span className="text-xs text-gray-500">SKU: 123456</span>
+						{stock > 0 && (
+							<span className="text-xs font-medium text-secondary">En stock: {stock}</span>
+						)}
 					</div>
 					<div className="flex items-center gap-2 mb-6">
 						<label htmlFor="qty" className="text-sm text-gray-700">
@@ -362,9 +225,9 @@ function ProductQuickView({ product, onClose }) {
 							id="qty"
 							type="number"
 							min={1}
-							max={stock}
+							max={stock || 1}
 							value={qty}
-							onChange={e => setQty(Math.max(1, Math.min(stock, Number(e.target.value))))}
+							onChange={e => setQty(Math.max(1, Math.min(stock || 1, Number(e.target.value))))}
 							className="w-16 px-2 py-1 border border-gray-200 rounded text-center focus:ring-2 focus:ring-primary"
 						/>
 					</div>
@@ -383,12 +246,97 @@ function ProductQuickView({ product, onClose }) {
 
 export default function HomePage() {
 	const [quickView, setQuickView] = useState(null);
+	const [banners, setBanners] = useState([]);
+	const [categories, setCategories] = useState([]);
+	const [promos, setPromos] = useState([]);
+	const [destacados, setDestacados] = useState([]);
+	const [loading, setLoading] = useState(true);
+
+	// Fetch banners, categories, promos, destacados desde la API
+	useEffect(() => {
+		async function fetchAll() {
+			setLoading(true);
+			try {
+				// Banners (puede ser un endpoint propio, aquí ejemplo hardcodeado)
+				setBanners([
+					{
+						img: 'https://images.unsplash.com/photo-1504674900247-0877df9cc836?auto=format&fit=crop&w=1200&q=80',
+						title: '¡Super Ofertas de la Semana!',
+						desc: 'Aprovechá descuentos exclusivos en cientos de productos.',
+						cta: 'Ver promociones',
+						to: '/promociones',
+					},
+					{
+						img: 'https://images.unsplash.com/photo-1519864600265-abb23847ef2c?auto=format&fit=crop&w=1200&q=80',
+						title: 'Envío gratis en compras mayores a $15.000',
+						desc: 'Recibí tu compra en casa sin cargo.',
+						cta: 'Ver condiciones',
+						to: '/',
+					},
+					{
+						img: 'https://images.unsplash.com/photo-1464306076886-debca5e8a6b0?auto=format&fit=crop&w=1200&q=80',
+						title: '¡Registrate y obtené 10% OFF!',
+						desc: 'Solo para nuevos usuarios. ¡No te lo pierdas!',
+						cta: 'Registrarse',
+						to: '/signup',
+					},
+				]);
+				// Categorías
+				const catRes = await fetch("http://localhost:4040/categorias");
+				const catData = await catRes.json();
+				setCategories(
+					Array.isArray(catData.content)
+						? catData.content.map(c => ({
+							name: c.nombre,
+							to: `/categorias?cat=${c.id}`,
+							img: (c.productos && c.productos[0]?.imagenes?.[0]?.imagen) || FALLBACK_IMG,
+						}))
+						: []
+				);
+				// Promociones (puede ser endpoint propio, aquí ejemplo hardcodeado)
+				setPromos([
+					{
+						img: 'https://images.unsplash.com/photo-1502741338009-cac2772e18bc?auto=format&fit=crop&w=400&q=80',
+						title: '2x1 en Gaseosas',
+						desc: 'Solo por esta semana, llevá 2 y pagá 1 en todas las gaseosas seleccionadas.',
+						cta: 'Ver productos',
+						to: '/promociones',
+					},
+					{
+						img: 'https://images.unsplash.com/photo-1519864600265-abb23847ef2c?auto=format&fit=crop&w=400&q=80',
+						title: '20% OFF en Frutas y Verduras',
+						desc: 'Comé saludable con descuento en productos frescos.',
+						cta: 'Comprar ahora',
+						to: '/categorias?cat=verduleria',
+					},
+					{
+						img: 'https://images.unsplash.com/photo-1464306076886-debca5e8a6b0?auto=format&fit=crop&w=400&q=80',
+						title: 'Envío gratis',
+						desc: 'En compras mayores a $15.000, el envío es gratis a todo el país.',
+						cta: 'Ver más',
+						to: '/',
+					},
+				]);
+				// Productos destacados
+				const prodRes = await fetch("http://localhost:4040/producto?destacados=true");
+				const prodData = await prodRes.json();
+				setDestacados(Array.isArray(prodData.content) ? prodData.content : []);
+			} catch {
+				setCategories([]);
+				setPromos([]);
+				setDestacados([]);
+			} finally {
+				setLoading(false);
+			}
+		}
+		fetchAll();
+	}, []);
 
 	return (
 		<div className="w-full flex flex-col items-center">
 			{/* Carousel */}
 			<div className="w-full max-w-[1400px] px-2 sm:px-6">
-				<Carousel />
+				{banners.length > 0 && <Carousel banners={banners} />}
 			</div>
 			{/* Categorías */}
 			<div className="w-full max-w-[1400px] px-2 sm:px-6 mb-12">
@@ -423,19 +371,45 @@ export default function HomePage() {
 						style={{ scrollSnapType: 'x mandatory', WebkitOverflowScrolling: 'touch' }}>
 						{destacados.map(prod => (
 							<div
-								key={prod.name}
+								key={prod.id || prod.nombre}
 								className="min-w-[220px] max-w-[240px] flex-shrink-0 flex h-full"
 								style={{ scrollSnapAlign: 'center' }}
 							>
-								<ProductCardWithFallback {...prod} onQuickView={setQuickView} />
+								<ProductCardWithFallback
+									name={prod.nombre}
+									brand={prod.marca}
+									img={
+										(Array.isArray(prod.imagenes) && prod.imagenes[0]?.imagen)
+										|| (Array.isArray(prod.imagenes) && typeof prod.imagenes[0] === "string" && prod.imagenes[0])
+										|| undefined
+									}
+									price={prod.precio}
+									weight={prod.unidad_medida}
+									offer={prod.descuento > 0 ? `${prod.descuento}% OFF` : undefined}
+									bestSeller={prod.bestSeller}
+									onQuickView={setQuickView}
+								/>
 							</div>
 						))}
 					</div>
 					{/* Desktop: masonry-like grid */}
 					<div className="hidden sm:grid grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-x-8 gap-y-10 auto-rows-[1fr]">
 						{destacados.map(prod => (
-							<div key={prod.name} className="flex h-full min-h-0">
-								<ProductCardWithFallback {...prod} onQuickView={setQuickView} />
+							<div key={prod.id || prod.nombre} className="flex h-full min-h-0">
+								<ProductCardWithFallback
+									name={prod.nombre}
+									brand={prod.marca}
+									img={
+										(Array.isArray(prod.imagenes) && prod.imagenes[0]?.imagen)
+										|| (Array.isArray(prod.imagenes) && typeof prod.imagenes[0] === "string" && prod.imagenes[0])
+										|| undefined
+									}
+									price={prod.precio}
+									weight={prod.unidad_medida}
+									offer={prod.descuento > 0 ? `${prod.descuento}% OFF` : undefined}
+									bestSeller={prod.bestSeller}
+									onQuickView={setQuickView}
+								/>
 							</div>
 						))}
 					</div>

@@ -43,14 +43,16 @@ function ProductQuickView({ product, onClose }) {
 
 	if (!product) return null
 
-	const stock = 12
-	const description = 'Producto seleccionado por su frescura y calidad. Ideal para tu mesa diaria. Aprovechá esta oferta exclusiva online.'
-
-	// Unificar nombres para HomePage y BuscarPage
-	const price = product.price !== undefined ? product.price : product.precio;
-	const name = product.name || product.nombre;
-	const brand = product.brand || product.marca;
-	const img = product.img;
+	const stock = product.stock ?? 0
+	const description = product.descripcion || product.description || ""
+	const price = product.precio ?? product.price;
+	const name = product.nombre ?? product.name;
+	const brand = product.marca ?? product.brand;
+	const img =
+		(product.imagenes && Array.isArray(product.imagenes) && product.imagenes[0]?.imagen)
+		|| (product.imagenes && Array.isArray(product.imagenes) && typeof product.imagenes[0] === "string" && product.imagenes[0])
+		|| product.imagenUrl
+		|| product.img;
 
 	function handleBgClick(e) {
 		if (e.target === e.currentTarget) onClose()
@@ -67,7 +69,7 @@ function ProductQuickView({ product, onClose }) {
 				<div className="flex-1 flex items-center justify-center bg-gray-50 p-6 md:p-8">
 					{img ? (
 						<img
-							src={Array.isArray(img) ? img[0] : img}
+							src={img}
 							alt={name}
 							className="w-40 h-40 md:w-56 md:h-56 object-cover rounded-xl shadow-lg transition-transform duration-300 hover:scale-105"
 							draggable={false}
@@ -89,24 +91,14 @@ function ProductQuickView({ product, onClose }) {
 					</button>
 					<div className="flex items-center gap-2 mb-2">
 						<span className="font-bold text-xl text-dark">{name}</span>
-						{product.offer && (
+						{product.descuento > 0 && (
 							<span className="bg-accent text-dark text-xs font-bold px-2 py-0.5 rounded-full shadow">
-								{product.offer}
-							</span>
-						)}
-						{product.promo && (
-							<span className="bg-accent text-dark text-xs font-bold px-2 py-0.5 rounded-full shadow">
-								Promo
-							</span>
-						)}
-						{product.bestSeller && (
-							<span className="bg-secondary text-white text-xs font-bold px-2 py-0.5 rounded-full shadow">
-								Más vendido
+								{product.descuento}% OFF
 							</span>
 						)}
 					</div>
 					<div className="text-sm text-muted mb-1">
-						{brand} {product.weight && `· ${product.weight}`}
+						{brand}
 					</div>
 					<div className="text-primary font-bold text-2xl mb-1">
 						${price}
@@ -117,8 +109,6 @@ function ProductQuickView({ product, onClose }) {
 					<div className="text-gray-600 text-sm mb-4">{description}</div>
 					<div className="flex items-center gap-3 mb-4">
 						<span className="text-xs font-medium text-secondary">En stock</span>
-						<span className="text-xs text-gray-400">|</span>
-						<span className="text-xs text-gray-500">SKU: 123456</span>
 					</div>
 					<div className="flex items-center gap-2 mb-6">
 						<label htmlFor="qty" className="text-sm text-gray-700">
@@ -163,38 +153,74 @@ export default function BuscarPage() {
 	const [subcategorias, setSubcategorias] = useState([])
 	const [sortBy, setSortBy] = useState('relevancia')
 	const [quickView, setQuickView] = useState(null)
+	const [productos, setProductos] = useState([])
+	const [loading, setLoading] = useState(true)
+	const [error, setError] = useState("")
+	const [categoriasApi, setCategoriasApi] = useState([])
 
-	// Si cambia el parámetro de la URL, actualiza el input y el filtro
+	// Fetch categorías desde el backend
+	useEffect(() => {
+		async function fetchCategorias() {
+			try {
+				const res = await fetch("http://localhost:4040/categorias");
+				const data = await res.json();
+				setCategoriasApi(Array.isArray(data.content) ? data.content : []);
+			} catch (err) {
+				setCategoriasApi([]);
+			}
+		}
+		fetchCategorias();
+	}, []);
+
+	// Fetch productos del backend paginado
+	useEffect(() => {
+		async function fetchProductos() {
+			setLoading(true)
+			setError("")
+			try {
+				let url = "http://localhost:4040/producto";
+				const params = [];
+				if (query) params.push(`nombre=${encodeURIComponent(query)}`);
+				if (marcas.length > 0) params.push(`marca=${marcas.join(",")}`);
+				if (categorias.length > 0) params.push(`categoriaId=${categorias.join(",")}`);
+				if (subcategorias.length > 0) params.push(`subcategoriaId=${subcategorias.join(",")}`);
+				if (promo) params.push(`oferta=true`);
+				if (precioMin) params.push(`precioMin=${precioMin}`);
+				if (precioMax) params.push(`precioMax=${precioMax}`);
+				if (params.length > 0) url += "?" + params.join("&");
+
+				const res = await fetch(url);
+				if (!res.ok) throw new Error("Error al cargar productos");
+				const data = await res.json();
+				setProductos(Array.isArray(data.content) ? data.content : []);
+			} catch (err) {
+				setError("No se pudieron cargar los productos.");
+				setProductos([]);
+			} finally {
+				setLoading(false)
+			}
+		}
+		fetchProductos();
+	// eslint-disable-next-line
+	}, [query, marcas, categorias, subcategorias, promo, precioMin, precioMax]);
+
 	useEffect(() => {
 		setQuery(searchParam)
 	}, [searchParam])
 
-	// Subcategorías disponibles según categorías seleccionadas
-	const subcategoriasDisponibles = CATEGORIAS
-		.filter(c => categorias.includes(c.value))
-		.flatMap(c => c.sub)
-		.filter((v, i, arr) => arr.indexOf(v) === i) // únicos
+	// Subcategorías disponibles según categorías seleccionadas (de la API)
+	const subcategoriasDisponibles = categoriasApi
+		.filter(cat => categorias.includes(String(cat.id)))
+		.flatMap(cat => cat.subcategorias || [])
+		.map(sub => ({ id: String(sub.id), nombre: sub.nombre }))
+		.filter((v, i, arr) => arr.findIndex(x => x.id === v.id) === i);
 
-	// Simulación de resultados
-	const resultados = [
-		{ nombre: 'Leche Entera', marca: 'La Serenísima', precio: 800, promo: true, categoria: 'lacteos', sub: 'Leche' },
-		{ nombre: 'Pan Integral', marca: 'Bimbo', precio: 650, promo: false, categoria: 'panaderia', sub: 'Pan' },
-		{ nombre: 'Coca-Cola 2L', marca: 'Coca-Cola', precio: 1200, promo: true, categoria: 'bebidas', sub: 'Sin alcohol' },
-		// ...más productos...
-	].filter(p => 
-		(!query || p.nombre.toLowerCase().includes(query.toLowerCase()) || (p.marca && p.marca.toLowerCase().includes(query.toLowerCase())))
-		&& (marcas.length === 0 || marcas.includes(p.marca))
-		&& (categorias.length === 0 || categorias.includes(p.categoria))
-		&& (subcategorias.length === 0 || subcategorias.includes(p.sub))
-		&& (!promo || p.promo)
-		&& (!precioMin || p.precio >= Number(precioMin))
-		&& (!precioMax || p.precio <= Number(precioMax))
-	).sort((a, b) => {
+	const productosFiltrados = [...productos].sort((a, b) => {
 		if (sortBy === 'precio-asc') return a.precio - b.precio
 		if (sortBy === 'precio-desc') return b.precio - a.precio
-		if (sortBy === 'nombre-asc') return a.nombre.localeCompare(b.nombre)
-		if (sortBy === 'nombre-desc') return b.nombre.localeCompare(a.nombre)
-		return 0 // relevancia o default
+		if (sortBy === 'nombre-asc') return (a.nombre || "").localeCompare(b.nombre || "")
+		if (sortBy === 'nombre-desc') return (b.nombre || "").localeCompare(a.nombre || "")
+		return 0
 	})
 
 	function handleMarcaChange(marca) {
@@ -205,25 +231,24 @@ export default function BuscarPage() {
 		)
 	}
 
-	function handleCategoriaChange(cat) {
+	function handleCategoriaChange(catId) {
 		setCategorias(categorias =>
-			categorias.includes(cat)
-				? categorias.filter(c => c !== cat)
-				: [...categorias, cat]
+			categorias.includes(catId)
+				? categorias.filter(c => c !== catId)
+				: [...categorias, catId]
 		)
-		// Si se deselecciona una categoría, quitar sus subcategorías
 		setSubcategorias(subs =>
 			subs.filter(sub =>
-				CATEGORIAS.filter(c => categorias.includes(c)).flatMap(c => c.sub).includes(sub)
+				subcategoriasDisponibles.map(s => s.id).includes(sub)
 			)
 		)
 	}
 
-	function handleSubcategoriaChange(sub) {
+	function handleSubcategoriaChange(subId) {
 		setSubcategorias(subcategorias =>
-			subcategorias.includes(sub)
-				? subcategorias.filter(s => s !== sub)
-				: [...subcategorias, sub]
+			subcategorias.includes(subId)
+				? subcategorias.filter(s => s !== subId)
+				: [...subcategorias, subId]
 		)
 	}
 
@@ -263,15 +288,15 @@ export default function BuscarPage() {
 						<div>
 							<label className="block text-sm font-medium mb-1">Categoría</label>
 							<div className="flex flex-col gap-1 max-h-40 overflow-y-auto">
-								{CATEGORIAS.map(c => (
-									<label key={c.value} className="flex items-center gap-2 text-sm">
+								{categoriasApi.map(c => (
+									<label key={c.id} className="flex items-center gap-2 text-sm">
 										<input
 											type="checkbox"
-											checked={categorias.includes(c.value)}
-											onChange={() => handleCategoriaChange(c.value)}
+											checked={categorias.includes(String(c.id))}
+											onChange={() => handleCategoriaChange(String(c.id))}
 											className="rounded border-gray-300 text-primary focus:ring-primary"
 										/>
-										{c.label}
+										{c.nombre}
 									</label>
 								))}
 							</div>
@@ -283,14 +308,14 @@ export default function BuscarPage() {
 									<span className="text-xs text-gray-400">Seleccioná una categoría</span>
 								)}
 								{subcategoriasDisponibles.map(sub => (
-									<label key={sub} className="flex items-center gap-2 text-sm">
+									<label key={sub.id} className="flex items-center gap-2 text-sm">
 										<input
 											type="checkbox"
-											checked={subcategorias.includes(sub)}
-											onChange={() => handleSubcategoriaChange(sub)}
+											checked={subcategorias.includes(String(sub.id))}
+											onChange={() => handleSubcategoriaChange(String(sub.id))}
 											className="rounded border-gray-300 text-primary focus:ring-primary"
 										/>
-										{sub}
+										{sub.nombre}
 									</label>
 								))}
 							</div>
@@ -347,20 +372,28 @@ export default function BuscarPage() {
 							</select>
 						</div>
 					</div>
-					{resultados.length === 0 ? (
+					{loading ? (
+						<div className="text-gray-500">Cargando productos...</div>
+					) : error ? (
+						<div className="text-red-500">{error}</div>
+					) : productosFiltrados.length === 0 ? (
 						<div className="text-gray-500">No se encontraron productos con esos filtros.</div>
 					) : (
 						<div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-6">
-							{resultados.map((p, i) => (
+							{productosFiltrados.map((p, i) => (
 								<ProductCard
-									key={i}
+									key={p.id || i}
 									name={p.nombre}
 									brand={p.marca}
-									img={p.img || undefined}
+									img={
+										(Array.isArray(p.imagenes) && p.imagenes[0]?.imagen)
+										|| (Array.isArray(p.imagenes) && typeof p.imagenes[0] === "string" && p.imagenes[0])
+										|| undefined
+									}
 									price={p.precio}
-									weight={p.weight}
-									offer={p.promo ? 'Promo' : undefined}
-									bestSeller={false}
+									weight={p.unidad_medida}
+									offer={p.descuento > 0 ? `${p.descuento}% OFF` : undefined}
+									bestSeller={p.bestSeller}
 									onQuickView={setQuickView}
 								/>
 							))}
