@@ -144,7 +144,8 @@ function ProductCardWithFallback(props) {
 			{...props}
 			img={imgSrc}
 			onErrorImg={FALLBACK_IMG}
-			// Pasar onError para que ProductCard lo use si lo implementa
+			onQuickView={props.onQuickView}
+			showSinImpuestos={true}
 		/>
 	)
 }
@@ -239,30 +240,54 @@ function CategoryCard({ name, img, to }) {
 	)
 }
 
+function PromotionsCard({ img, title, desc, cta, to }) {
+	return (
+		<div className="bg-white rounded-xl shadow hover:shadow-lg border border-gray-100 hover:border-primary p-6 flex flex-col items-center transition">
+			<img
+				src={img}
+				alt={title}
+				className="w-24 h-24 object-cover rounded-lg mb-3"
+				style={{ objectFit: "cover" }}
+			/>
+			<div className="font-bold text-lg text-dark mb-1 text-center">{title}</div>
+			<div className="text-sm text-muted mb-3 text-center">{desc}</div>
+			<Link
+				to={to}
+				className="bg-primary hover:bg-secondary text-white px-4 py-2 rounded font-semibold text-sm shadow transition"
+			>
+				{cta}
+			</Link>
+		</div>
+	)
+}
+
 function ProductQuickView({ product, onClose }) {
-	const [qty, setQty] = useState(1)
+	const [qty, setQty] = useState(1);
 
-	// Reiniciar cantidad cuando cambia el producto
 	useEffect(() => {
-		setQty(1)
-	}, [product])
+		setQty(1);
+	}, [product]);
 
-	// Cerrar con ESC key solo si el modal está abierto
 	useEffect(() => {
-		if (!product) return
-		const handler = e => { if (e.key === 'Escape') onClose() }
-		window.addEventListener('keydown', handler)
-		return () => window.removeEventListener('keydown', handler)
-	}, [onClose, product])
+		if (!product) return;
+		const handler = e => { if (e.key === 'Escape') onClose(); };
+		window.addEventListener('keydown', handler);
+		return () => window.removeEventListener('keydown', handler);
+	}, [onClose, product]);
 
-	if (!product) return null
+	if (!product) return null;
 
-	// Simular stock y descripción
-	const stock = 12
-	const description = 'Producto seleccionado por su frescura y calidad. Ideal para tu mesa diaria. Aprovechá esta oferta exclusiva online.'
+	const stock = 12;
+	const description = 'Producto seleccionado por su frescura y calidad. Ideal para tu mesa diaria. Aprovechá esta oferta exclusiva online.';
+
+	// Unificar nombres para HomePage y BuscarPage
+	const price = product.price !== undefined ? product.price : product.precio;
+	const name = product.name || product.nombre;
+	const brand = product.brand || product.marca;
+	const img = product.img;
 
 	function handleBgClick(e) {
-		if (e.target === e.currentTarget) onClose()
+		if (e.target === e.currentTarget) onClose();
 	}
 
 	return (
@@ -273,16 +298,20 @@ function ProductQuickView({ product, onClose }) {
 			role="dialog"
 		>
 			<div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full p-0 relative flex flex-col md:flex-row overflow-hidden">
-				{/* Imagen */}
 				<div className="flex-1 flex items-center justify-center bg-gray-50 p-6 md:p-8">
-					<img
-						src={product.img}
-						alt={product.name}
-						className="w-40 h-40 md:w-56 md:h-56 object-cover rounded-xl shadow-lg transition-transform duration-300 hover:scale-105"
-						draggable={false}
-					/>
+					{img ? (
+						<img
+							src={Array.isArray(img) ? img[0] : img}
+							alt={name}
+							className="w-40 h-40 md:w-56 md:h-56 object-cover rounded-xl shadow-lg transition-transform duration-300 hover:scale-105"
+							draggable={false}
+						/>
+					) : (
+						<div className="w-40 h-40 md:w-56 md:h-56 bg-gray-100 rounded-xl shadow-lg flex items-center justify-center text-5xl">
+							🛒
+						</div>
+					)}
 				</div>
-				{/* Info */}
 				<div className="flex-1 flex flex-col p-6 md:p-8">
 					<button
 						className="absolute top-3 right-3 text-gray-400 hover:text-primary text-2xl font-bold"
@@ -293,10 +322,15 @@ function ProductQuickView({ product, onClose }) {
 						×
 					</button>
 					<div className="flex items-center gap-2 mb-2">
-						<span className="font-bold text-xl text-dark">{product.name}</span>
+						<span className="font-bold text-xl text-dark">{name}</span>
 						{product.offer && (
 							<span className="bg-accent text-dark text-xs font-bold px-2 py-0.5 rounded-full shadow">
 								{product.offer}
+							</span>
+						)}
+						{product.promo && (
+							<span className="bg-accent text-dark text-xs font-bold px-2 py-0.5 rounded-full shadow">
+								Promo
 							</span>
 						)}
 						{product.bestSeller && (
@@ -306,16 +340,17 @@ function ProductQuickView({ product, onClose }) {
 						)}
 					</div>
 					<div className="text-sm text-muted mb-1">
-						{product.brand} {product.weight && `· ${product.weight}`}
+						{brand} {product.weight && `· ${product.weight}`}
 					</div>
-					<div className="text-primary font-bold text-2xl mb-2">
-						${product.price}
+					<div className="text-primary font-bold text-2xl mb-1">
+						${price}
+					</div>
+					<div className="text-xs text-gray-400 mb-3">
+						Precio sin impuestos nacionales: ${price ? Math.round(price / 1.21) : 0}
 					</div>
 					<div className="text-gray-600 text-sm mb-4">{description}</div>
 					<div className="flex items-center gap-3 mb-4">
-						<span className={`text-xs font-medium ${stock > 5 ? 'text-secondary' : 'text-red-500'}`}>
-							{stock > 5 ? 'En stock' : 'Últimas unidades'}
-						</span>
+						<span className="text-xs font-medium text-secondary">En stock</span>
 						<span className="text-xs text-gray-400">|</span>
 						<span className="text-xs text-gray-500">SKU: 123456</span>
 					</div>
@@ -346,43 +381,15 @@ function ProductQuickView({ product, onClose }) {
 	)
 }
 
-function PromotionsCard({ img, title, desc, cta, to }) {
-	const [imgSrc, setImgSrc] = useState(img)
-	return (
-		<div className="bg-white rounded-2xl shadow-lg hover:shadow-xl transition overflow-hidden flex flex-col">
-			<img
-				src={imgSrc}
-				alt={title}
-				onError={() => setImgSrc(FALLBACK_IMG)}
-				className="w-full h-40 object-cover object-center"
-			/>
-			<div className="p-6 flex flex-col flex-1">
-				<h3 className="text-lg sm:text-xl font-bold mb-2 text-primary">
-					{title}
-				</h3>
-				<p className="text-gray-700 text-base sm:text-lg mb-4 flex-1">
-					{desc}
-				</p>
-				<Link
-					to={to}
-					className="inline-block bg-accent text-dark font-semibold px-4 py-2 rounded-lg shadow hover:bg-secondary hover:text-white transition"
-				>
-					{cta}
-				</Link>
-			</div>
-		</div>
-	)
-}
-
 export default function HomePage() {
-	const [quickView, setQuickView] = useState(null)
+	const [quickView, setQuickView] = useState(null);
+
 	return (
 		<div className="w-full flex flex-col items-center">
 			{/* Carousel */}
 			<div className="w-full max-w-[1400px] px-2 sm:px-6">
 				<Carousel />
 			</div>
-
 			{/* Categorías */}
 			<div className="w-full max-w-[1400px] px-2 sm:px-6 mb-12">
 				<h2 className="text-2xl sm:text-3xl font-semibold mb-6 text-dark">
@@ -394,7 +401,6 @@ export default function HomePage() {
 					))}
 				</div>
 			</div>
-
 			{/* Promociones destacadas */}
 			<div className="w-full max-w-[1400px] px-2 sm:px-6 mb-12">
 				<h2 className="text-2xl sm:text-3xl font-semibold mb-6 text-dark">
@@ -406,7 +412,6 @@ export default function HomePage() {
 					))}
 				</div>
 			</div>
-
 			{/* Productos destacados */}
 			<div className="w-full max-w-[1400px] px-2 sm:px-6 mb-16">
 				<h2 className="text-2xl sm:text-3xl font-semibold mb-6 text-dark">
@@ -436,7 +441,9 @@ export default function HomePage() {
 					</div>
 				</div>
 			</div>
-			<ProductQuickView product={quickView} onClose={() => setQuickView(null)} />
+			{quickView && (
+				<ProductQuickView product={quickView} onClose={() => setQuickView(null)} />
+			)}
 		</div>
 	)
 }

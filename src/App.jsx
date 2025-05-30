@@ -12,6 +12,9 @@ import ResetPasswordPage from "./pages/ResetPasswordPage";
 import ProtectedRoute from "./pages/ProtectedRoute";
 import ProfilePage from "./pages/ProfilePage";
 import ResetPasswordPageLog from "./pages/ResetPasswordPageLog";
+import ProductDetailPage from "./pages/ProductDetailPage";
+import MisPedidosPage from "./pages/MisPedidosPage";
+import PedidoDetallePage from "./pages/PedidoDetallePage";
 import "./App.css";
 
 function App() {
@@ -27,10 +30,13 @@ function App() {
           <Route path="/signin" element={<SignInPage />} />
           <Route path="/reset-password" element={<ResetPasswordPage />} />
           <Route path="/signup" element={<SignUpPage />} />
+          <Route path="/producto/:slug" element={<ProductDetailPage />} />
           <Route element={<ProtectedRoute />}>
             <Route path="/carrito" element={<CartPage />} />
             <Route path="/admin" element={<AdminPanelPage />} />
             <Route path="/perfil" element={<ProfilePage />} />
+            <Route path="/mis-pedidos" element={<MisPedidosPage />} />
+            <Route path="/mis-pedidos/:id" element={<PedidoDetallePage />} />
             <Route
               path="/cambiar-contrasena"
               element={<ResetPasswordPageLog />}

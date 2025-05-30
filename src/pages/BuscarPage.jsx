@@ -30,12 +30,10 @@ const SORT_OPTIONS = [
 function ProductQuickView({ product, onClose }) {
 	const [qty, setQty] = useState(1)
 
-	// Reiniciar cantidad cuando cambia el producto
 	useEffect(() => {
 		setQty(1)
 	}, [product])
 
-	// ESC key para cerrar
 	useEffect(() => {
 		if (!product) return
 		const handler = e => { if (e.key === 'Escape') onClose() }
@@ -47,6 +45,12 @@ function ProductQuickView({ product, onClose }) {
 
 	const stock = 12
 	const description = 'Producto seleccionado por su frescura y calidad. Ideal para tu mesa diaria. Aprovechá esta oferta exclusiva online.'
+
+	// Unificar nombres para HomePage y BuscarPage
+	const price = product.price !== undefined ? product.price : product.precio;
+	const name = product.name || product.nombre;
+	const brand = product.brand || product.marca;
+	const img = product.img;
 
 	function handleBgClick(e) {
 		if (e.target === e.currentTarget) onClose()
@@ -61,9 +65,18 @@ function ProductQuickView({ product, onClose }) {
 		>
 			<div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full p-0 relative flex flex-col md:flex-row overflow-hidden">
 				<div className="flex-1 flex items-center justify-center bg-gray-50 p-6 md:p-8">
-					<div className="w-40 h-40 md:w-56 md:h-56 bg-gray-100 rounded-xl shadow-lg flex items-center justify-center text-5xl">
-						🛒
-					</div>
+					{img ? (
+						<img
+							src={Array.isArray(img) ? img[0] : img}
+							alt={name}
+							className="w-40 h-40 md:w-56 md:h-56 object-cover rounded-xl shadow-lg transition-transform duration-300 hover:scale-105"
+							draggable={false}
+						/>
+					) : (
+						<div className="w-40 h-40 md:w-56 md:h-56 bg-gray-100 rounded-xl shadow-lg flex items-center justify-center text-5xl">
+							🛒
+						</div>
+					)}
 				</div>
 				<div className="flex-1 flex flex-col p-6 md:p-8">
 					<button
@@ -75,18 +88,31 @@ function ProductQuickView({ product, onClose }) {
 						×
 					</button>
 					<div className="flex items-center gap-2 mb-2">
-						<span className="font-bold text-xl text-dark">{product.nombre}</span>
+						<span className="font-bold text-xl text-dark">{name}</span>
+						{product.offer && (
+							<span className="bg-accent text-dark text-xs font-bold px-2 py-0.5 rounded-full shadow">
+								{product.offer}
+							</span>
+						)}
 						{product.promo && (
 							<span className="bg-accent text-dark text-xs font-bold px-2 py-0.5 rounded-full shadow">
 								Promo
 							</span>
 						)}
+						{product.bestSeller && (
+							<span className="bg-secondary text-white text-xs font-bold px-2 py-0.5 rounded-full shadow">
+								Más vendido
+							</span>
+						)}
 					</div>
 					<div className="text-sm text-muted mb-1">
-						{product.marca} {product.sub && `· ${product.sub}`}
+						{brand} {product.weight && `· ${product.weight}`}
 					</div>
-					<div className="text-primary font-bold text-2xl mb-2">
-						${product.precio}
+					<div className="text-primary font-bold text-2xl mb-1">
+						${price}
+					</div>
+					<div className="text-xs text-gray-400 mb-3">
+						Precio sin impuestos nacionales: ${price ? Math.round(price / 1.21) : 0}
 					</div>
 					<div className="text-gray-600 text-sm mb-4">{description}</div>
 					<div className="flex items-center gap-3 mb-4">
