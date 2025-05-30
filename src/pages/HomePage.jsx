@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom'
 import { useState, useEffect } from 'react'
-import ProductCard from '../components/ProductCard'
+import ProductCard from '../Components/ProductCard'
 
 // cuando integramos con back, se van estas cosas hardcodeadas
 

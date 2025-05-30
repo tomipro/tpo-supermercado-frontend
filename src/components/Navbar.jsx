@@ -260,7 +260,16 @@ export default function Navbar() {
                   >
                     Mis direcciones
                   </Link>
-                  {/* Agregá más opciones si querés */}
+                  {usuario?.rol === "ADMIN" && (
+                  // uso solo el doble igual para que no considere mayusculas y minúsculas
+                  <Link
+                    to="/admin"
+                    className="block px-4 py-2 text-dark hover:bg-accent/40 hover:text-primary rounded transition"
+                    onClick={() => setUserDropdown(false)}
+                  >
+                    Admin
+                  </Link>
+                  )}
                   <button
                     onClick={() => {
                       setUserDropdown(false);
