@@ -3,6 +3,16 @@ import { Link } from "react-router-dom";
 
 const FALLBACK_IMG = "https://cdn-icons-png.flaticon.com/512/1046/1046857.png";
 
+function SkeletonCategoryCard() {
+	return (
+		<div className="animate-pulse bg-white rounded-xl shadow p-4 flex flex-col items-center border border-gray-100">
+			<div className="w-20 h-20 bg-gray-200 rounded-full mb-2" />
+			<div className="h-4 w-2/3 bg-gray-200 rounded mb-2" />
+			<div className="h-3 w-1/2 bg-gray-100 rounded mb-1" />
+		</div>
+	)
+}
+
 export default function CategoriesPage() {
 	const [categories, setCategories] = useState([]);
 	const [loading, setLoading] = useState(true);
@@ -27,7 +37,11 @@ export default function CategoriesPage() {
 		<div className="max-w-5xl mx-auto mt-10 px-2 sm:px-6">
 			<h1 className="text-3xl font-bold mb-8 text-primary">Categorías</h1>
 			{loading ? (
-				<div className="text-gray-500">Cargando categorías...</div>
+				<div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-8">
+					{Array.from({ length: 8 }).map((_, i) => (
+						<SkeletonCategoryCard key={i} />
+					))}
+				</div>
 			) : categories.length === 0 ? (
 				<div className="text-gray-500">No hay categorías disponibles.</div>
 			) : (

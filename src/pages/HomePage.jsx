@@ -244,46 +244,80 @@ function ProductQuickView({ product, onClose }) {
 	)
 }
 
+function SkeletonCategoryCard() {
+	return (
+		<div className="animate-pulse bg-white rounded-xl shadow p-4 flex flex-col items-center border border-gray-100">
+			<div className="w-16 h-16 sm:w-20 sm:h-20 bg-gray-200 rounded-full mb-2" />
+			<div className="h-4 w-2/3 bg-gray-200 rounded mb-2" />
+		</div>
+	)
+}
+
+function SkeletonProductCard() {
+	return (
+		<div className="animate-pulse bg-white rounded-xl shadow p-4 flex flex-col items-center border border-gray-100 min-w-[220px] max-w-[240px]">
+			<div className="w-20 h-20 sm:w-24 sm:h-24 bg-gray-200 rounded-lg mb-2" />
+			<div className="h-4 w-2/3 bg-gray-200 rounded mb-2" />
+			<div className="h-3 w-1/2 bg-gray-100 rounded mb-1" />
+			<div className="h-5 w-1/3 bg-gray-200 rounded mb-2" />
+		</div>
+	)
+}
+
+function SkeletonPromoCard() {
+	return (
+		<div className="animate-pulse bg-white rounded-xl shadow border border-gray-100 p-6 flex flex-col items-center">
+			<div className="w-24 h-24 bg-gray-200 rounded-lg mb-3" />
+			<div className="h-4 w-2/3 bg-gray-200 rounded mb-2" />
+			<div className="h-3 w-1/2 bg-gray-100 rounded mb-2" />
+			<div className="h-5 w-1/3 bg-gray-200 rounded mb-2" />
+		</div>
+	)
+}
+
 export default function HomePage() {
 	const [quickView, setQuickView] = useState(null);
 	const [banners, setBanners] = useState([]);
 	const [categories, setCategories] = useState([]);
 	const [promos, setPromos] = useState([]);
 	const [destacados, setDestacados] = useState([]);
-	const [loading, setLoading] = useState(true);
+	const [loadingCategories, setLoadingCategories] = useState(true);
+	const [loadingPromos, setLoadingPromos] = useState(true);
+	const [loadingDestacados, setLoadingDestacados] = useState(true);
 
-	// Fetch banners, categories, promos, destacados desde la API
+	// Fetch banners (puede ser endpoint propio, aquí ejemplo hardcodeado)
 	useEffect(() => {
-		async function fetchAll() {
-			setLoading(true);
-			try {
-				// Banners (puede ser un endpoint propio, aquí ejemplo hardcodeado)
-				setBanners([
-					{
-						img: 'https://images.unsplash.com/photo-1504674900247-0877df9cc836?auto=format&fit=crop&w=1200&q=80',
-						title: '¡Super Ofertas de la Semana!',
-						desc: 'Aprovechá descuentos exclusivos en cientos de productos.',
-						cta: 'Ver promociones',
-						to: '/promociones',
-					},
-					{
-						img: 'https://images.unsplash.com/photo-1519864600265-abb23847ef2c?auto=format&fit=crop&w=1200&q=80',
-						title: 'Envío gratis en compras mayores a $15.000',
-						desc: 'Recibí tu compra en casa sin cargo.',
-						cta: 'Ver condiciones',
-						to: '/',
-					},
-					{
-						img: 'https://images.unsplash.com/photo-1464306076886-debca5e8a6b0?auto=format&fit=crop&w=1200&q=80',
-						title: '¡Registrate y obtené 10% OFF!',
-						desc: 'Solo para nuevos usuarios. ¡No te lo pierdas!',
-						cta: 'Registrarse',
-						to: '/signup',
-					},
-				]);
-				// Categorías
-				const catRes = await fetch("http://localhost:4040/categorias");
-				const catData = await catRes.json();
+		setBanners([
+			{
+				img: 'https://images.unsplash.com/photo-1504674900247-0877df9cc836?auto=format&fit=crop&w=1200&q=80',
+				title: '¡Super Ofertas de la Semana!',
+				desc: 'Aprovechá descuentos exclusivos en cientos de productos.',
+				cta: 'Ver promociones',
+				to: '/promociones',
+			},
+			{
+				img: 'https://images.unsplash.com/photo-1519864600265-abb23847ef2c?auto=format&fit=crop&w=1200&q=80',
+				title: 'Envío gratis en compras mayores a $15.000',
+				desc: 'Recibí tu compra en casa sin cargo.',
+				cta: 'Ver condiciones',
+				to: '/',
+			},
+			{
+				img: 'https://images.unsplash.com/photo-1464306076886-debca5e8a6b0?auto=format&fit=crop&w=1200&q=80',
+				title: '¡Registrate y obtené 10% OFF!',
+				desc: 'Solo para nuevos usuarios. ¡No te lo pierdas!',
+				cta: 'Registrarse',
+				to: '/signup',
+			},
+		]);
+	}, []);
+
+	// Categorías
+	useEffect(() => {
+		setLoadingCategories(true);
+		fetch("http://localhost:4040/categorias")
+			.then(res => res.json())
+			.then(catData => {
 				setCategories(
 					Array.isArray(catData.content)
 						? catData.content.map(c => ({
@@ -293,43 +327,52 @@ export default function HomePage() {
 						}))
 						: []
 				);
-				// Promociones (puede ser endpoint propio, aquí ejemplo hardcodeado)
-				setPromos([
-					{
-						img: 'https://images.unsplash.com/photo-1502741338009-cac2772e18bc?auto=format&fit=crop&w=400&q=80',
-						title: '2x1 en Gaseosas',
-						desc: 'Solo por esta semana, llevá 2 y pagá 1 en todas las gaseosas seleccionadas.',
-						cta: 'Ver productos',
-						to: '/promociones',
-					},
-					{
-						img: 'https://images.unsplash.com/photo-1519864600265-abb23847ef2c?auto=format&fit=crop&w=400&q=80',
-						title: '20% OFF en Frutas y Verduras',
-						desc: 'Comé saludable con descuento en productos frescos.',
-						cta: 'Comprar ahora',
-						to: '/categorias?cat=verduleria',
-					},
-					{
-						img: 'https://images.unsplash.com/photo-1464306076886-debca5e8a6b0?auto=format&fit=crop&w=400&q=80',
-						title: 'Envío gratis',
-						desc: 'En compras mayores a $15.000, el envío es gratis a todo el país.',
-						cta: 'Ver más',
-						to: '/',
-					},
-				]);
-				// Productos destacados
-				const prodRes = await fetch("http://localhost:4040/producto?destacados=true");
-				const prodData = await prodRes.json();
+			})
+			.catch(() => setCategories([]))
+			.finally(() => setLoadingCategories(false));
+	}, []);
+
+	// Promociones (puede ser endpoint propio, aquí ejemplo hardcodeado)
+	useEffect(() => {
+		setLoadingPromos(true);
+		setTimeout(() => {
+			setPromos([
+				{
+					img: 'https://images.unsplash.com/photo-1502741338009-cac2772e18bc?auto=format&fit=crop&w=400&q=80',
+					title: '2x1 en Gaseosas',
+					desc: 'Solo por esta semana, llevá 2 y pagá 1 en todas las gaseosas seleccionadas.',
+					cta: 'Ver productos',
+					to: '/promociones',
+				},
+				{
+					img: 'https://images.unsplash.com/photo-1519864600265-abb23847ef2c?auto=format&fit=crop&w=400&q=80',
+					title: '20% OFF en Frutas y Verduras',
+					desc: 'Comé saludable con descuento en productos frescos.',
+					cta: 'Comprar ahora',
+					to: '/categorias?cat=verduleria',
+				},
+				{
+					img: 'https://images.unsplash.com/photo-1464306076886-debca5e8a6b0?auto=format&fit=crop&w=400&q=80',
+					title: 'Envío gratis',
+					desc: 'En compras mayores a $15.000, el envío es gratis a todo el país.',
+					cta: 'Ver más',
+					to: '/',
+				},
+			]);
+			setLoadingPromos(false);
+		}, 400); // Simula fetch
+	}, []);
+
+	// Productos destacados
+	useEffect(() => {
+		setLoadingDestacados(true);
+		fetch("http://localhost:4040/producto?destacados=true")
+			.then(res => res.json())
+			.then(prodData => {
 				setDestacados(Array.isArray(prodData.content) ? prodData.content : []);
-			} catch {
-				setCategories([]);
-				setPromos([]);
-				setDestacados([]);
-			} finally {
-				setLoading(false);
-			}
-		}
-		fetchAll();
+			})
+			.catch(() => setDestacados([]))
+			.finally(() => setLoadingDestacados(false));
 	}, []);
 
 	return (
@@ -343,22 +386,38 @@ export default function HomePage() {
 				<h2 className="text-2xl sm:text-3xl font-semibold mb-6 text-dark">
 					Categorías populares
 				</h2>
-				<div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-8 gap-4">
-					{categories.map(cat => (
-						<CategoryCard key={cat.name} {...cat} />
-					))}
-				</div>
+				{loadingCategories ? (
+					<div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-8 gap-4">
+						{Array.from({ length: 8 }).map((_, i) => (
+							<SkeletonCategoryCard key={i} />
+						))}
+					</div>
+				) : (
+					<div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-8 gap-4">
+						{categories.map(cat => (
+							<CategoryCard key={cat.name} {...cat} />
+						))}
+					</div>
+				)}
 			</div>
 			{/* Promociones destacadas */}
 			<div className="w-full max-w-[1400px] px-2 sm:px-6 mb-12">
 				<h2 className="text-2xl sm:text-3xl font-semibold mb-6 text-dark">
 					Promociones destacadas
 				</h2>
-				<div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-					{promos.map(promo => (
-						<PromotionsCard key={promo.title} {...promo} />
-					))}
-				</div>
+				{loadingPromos ? (
+					<div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+						{Array.from({ length: 3 }).map((_, i) => (
+							<SkeletonPromoCard key={i} />
+						))}
+					</div>
+				) : (
+					<div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+						{promos.map(promo => (
+							<PromotionsCard key={promo.title} {...promo} />
+						))}
+					</div>
+				)}
 			</div>
 			{/* Productos destacados */}
 			<div className="w-full max-w-[1400px] px-2 sm:px-6 mb-16">
@@ -367,52 +426,68 @@ export default function HomePage() {
 				</h2>
 				<div className="relative">
 					{/* Mobile: slider horizontal con scroll snap */}
-					<div className="flex gap-4 overflow-x-auto pb-2 sm:hidden"
-						style={{ scrollSnapType: 'x mandatory', WebkitOverflowScrolling: 'touch' }}>
-						{destacados.map(prod => (
-							<div
-								key={prod.id || prod.nombre}
-								className="min-w-[220px] max-w-[240px] flex-shrink-0 flex h-full"
-								style={{ scrollSnapAlign: 'center' }}
-							>
-								<ProductCardWithFallback
-									name={prod.nombre}
-									brand={prod.marca}
-									img={
-										(Array.isArray(prod.imagenes) && prod.imagenes[0]?.imagen)
-										|| (Array.isArray(prod.imagenes) && typeof prod.imagenes[0] === "string" && prod.imagenes[0])
-										|| undefined
-									}
-									price={prod.precio}
-									weight={prod.unidad_medida}
-									offer={prod.descuento > 0 ? `${prod.descuento}% OFF` : undefined}
-									bestSeller={prod.bestSeller}
-									onQuickView={setQuickView}
-								/>
-							</div>
-						))}
-					</div>
+					{loadingDestacados ? (
+						<div className="flex gap-4 overflow-x-auto pb-2 sm:hidden">
+							{Array.from({ length: 4 }).map((_, i) => (
+								<SkeletonProductCard key={i} />
+							))}
+						</div>
+					) : (
+						<div className="flex gap-4 overflow-x-auto pb-2 sm:hidden"
+							style={{ scrollSnapType: 'x mandatory', WebkitOverflowScrolling: 'touch' }}>
+							{destacados.map(prod => (
+								<div
+									key={prod.id || prod.nombre}
+									className="min-w-[220px] max-w-[240px] flex-shrink-0 flex h-full"
+									style={{ scrollSnapAlign: 'center' }}
+								>
+									<ProductCardWithFallback
+										name={prod.nombre}
+										brand={prod.marca}
+										img={
+											(Array.isArray(prod.imagenes) && prod.imagenes[0]?.imagen)
+											|| (Array.isArray(prod.imagenes) && typeof prod.imagenes[0] === "string" && prod.imagenes[0])
+											|| undefined
+										}
+										price={prod.precio}
+										weight={prod.unidad_medida}
+										offer={prod.descuento > 0 ? `${prod.descuento}% OFF` : undefined}
+										bestSeller={prod.bestSeller}
+										onQuickView={setQuickView}
+									/>
+								</div>
+							))}
+						</div>
+					)}
 					{/* Desktop: masonry-like grid */}
-					<div className="hidden sm:grid grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-x-8 gap-y-10 auto-rows-[1fr]">
-						{destacados.map(prod => (
-							<div key={prod.id || prod.nombre} className="flex h-full min-h-0">
-								<ProductCardWithFallback
-									name={prod.nombre}
-									brand={prod.marca}
-									img={
-										(Array.isArray(prod.imagenes) && prod.imagenes[0]?.imagen)
-										|| (Array.isArray(prod.imagenes) && typeof prod.imagenes[0] === "string" && prod.imagenes[0])
-										|| undefined
-									}
-									price={prod.precio}
-									weight={prod.unidad_medida}
-									offer={prod.descuento > 0 ? `${prod.descuento}% OFF` : undefined}
-									bestSeller={prod.bestSeller}
-									onQuickView={setQuickView}
-								/>
-							</div>
-						))}
-					</div>
+					{loadingDestacados ? (
+						<div className="hidden sm:grid grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-x-8 gap-y-10 auto-rows-[1fr]">
+							{Array.from({ length: 6 }).map((_, i) => (
+								<SkeletonProductCard key={i} />
+							))}
+						</div>
+					) : (
+						<div className="hidden sm:grid grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-x-8 gap-y-10 auto-rows-[1fr]">
+							{destacados.map(prod => (
+								<div key={prod.id || prod.nombre} className="flex h-full min-h-0">
+									<ProductCardWithFallback
+										name={prod.nombre}
+										brand={prod.marca}
+										img={
+											(Array.isArray(prod.imagenes) && prod.imagenes[0]?.imagen)
+											|| (Array.isArray(prod.imagenes) && typeof prod.imagenes[0] === "string" && prod.imagenes[0])
+											|| undefined
+										}
+										price={prod.precio}
+										weight={prod.unidad_medida}
+										offer={prod.descuento > 0 ? `${prod.descuento}% OFF` : undefined}
+										bestSeller={prod.bestSeller}
+										onQuickView={setQuickView}
+									/>
+								</div>
+							))}
+						</div>
+					)}
 				</div>
 			</div>
 			{quickView && (

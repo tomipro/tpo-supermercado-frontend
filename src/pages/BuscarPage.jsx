@@ -27,6 +27,17 @@ const SORT_OPTIONS = [
 	{ value: 'nombre-desc', label: 'Nombre: Z-A' },
 ]
 
+function SkeletonCard() {
+	return (
+		<div className="animate-pulse bg-white rounded-xl shadow p-4 flex flex-col items-center border border-gray-100">
+			<div className="w-24 h-24 bg-gray-200 rounded-lg mb-3" />
+			<div className="h-4 w-2/3 bg-gray-200 rounded mb-2" />
+			<div className="h-3 w-1/2 bg-gray-100 rounded mb-1" />
+			<div className="h-5 w-1/3 bg-gray-200 rounded mb-2" />
+		</div>
+	)
+}
+
 function ProductQuickView({ product, onClose }) {
 	const [qty, setQty] = useState(1)
 
@@ -373,7 +384,11 @@ export default function BuscarPage() {
 						</div>
 					</div>
 					{loading ? (
-						<div className="text-gray-500">Cargando productos...</div>
+						<div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-6">
+							{Array.from({ length: 8 }).map((_, i) => (
+								<SkeletonCard key={i} />
+							))}
+						</div>
 					) : error ? (
 						<div className="text-red-500">{error}</div>
 					) : productosFiltrados.length === 0 ? (
