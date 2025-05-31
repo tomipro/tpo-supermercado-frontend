@@ -1,5 +1,5 @@
 import { Outlet, useLocation } from "react-router-dom";
-import AdminNavbar from "../Components/AdminNavbar";
+import AdminNavbar from "../components/AdminNavbar";
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend,
 } from "recharts";

@@ -1,7 +1,7 @@
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../auth/AuthProvider";
 import { useEffect, useState } from "react";
-import CategoryAdminListCard from "../Components/CategoryAdminListCard";
+import CategoryAdminListCard from "../components/CategoryAdminListCard";
 
 export default function AdminPanelCategoriesPage() {
     const { usuario, token } = useAuth();

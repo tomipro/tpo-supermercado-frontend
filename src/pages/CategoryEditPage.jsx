@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useAuth } from "../auth/AuthProvider";
-import ProductAdminListCard from "../Components/ProductAdminListCard";
+import ProductAdminListCard from "../components/ProductAdminListCard";
 
 // Plantilla para nueva categoría
 const CATEGORIA_VACIA = {

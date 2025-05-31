@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "../auth/AuthProvider";
 import { useNavigate } from "react-router-dom";
-import ProductAdminListCard from "../Components/ProductAdminListCard";
+import ProductAdminListCard from "../components/ProductAdminListCard";
 
 export default function AdminPanelProductPage() {
   const { usuario, token } = useAuth();
