@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom'
 import { useState, useEffect } from 'react'
-import ProductCard from '../Components/ProductCard'
+import ProductCard from '../components/ProductCard'
 
 const FALLBACK_IMG = "https://cdn-icons-png.flaticon.com/512/1046/1046857.png"
 
