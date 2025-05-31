@@ -16,6 +16,9 @@ import ProductEditPage from "./pages/ProductEditPage";
 import CategoryEditPage from "./pages/CategoryEditPage";
 import AdminPanelCategoriesPage from "./pages/AdminPanelCategoriesPage";
 import AdminPage from "./pages/AdminPage";
+import ProductDetailPage from "./pages/ProductDetailPage";
+import MisPedidosPage from "./pages/MisPedidosPage";
+import PedidoDetallePage from "./pages/PedidoDetallePage";
 import "./App.css";
 
 function App() {
@@ -34,6 +37,7 @@ function App() {
           <Route path="/reset-password" element={<ResetPasswordPage />} />
 
           {/* Rutas protegidas */}
+          <Route path="/producto/:slug" element={<ProductDetailPage />} />
           <Route element={<ProtectedRoute />}>
             <Route path="/carrito" element={<CartPage />} />
             <Route path="/perfil" element={<ProfilePage />} />
@@ -48,6 +52,12 @@ function App() {
               <Route path="productos" element={<AdminPanelProductPage />} />
               <Route path="categorias" element={<AdminPanelCategoriesPage />} />
             </Route>
+            <Route path="/mis-pedidos" element={<MisPedidosPage />} />
+            <Route path="/mis-pedidos/:id" element={<PedidoDetallePage />} />
+            <Route
+              path="/cambiar-contrasena"
+              element={<ResetPasswordPageLog />}
+            />
           </Route>
 
           {/* Ruta catch-all */}

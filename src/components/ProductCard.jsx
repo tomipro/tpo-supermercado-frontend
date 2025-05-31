@@ -9,6 +9,7 @@ export default function ProductCard({
   offer,
   bestSeller,
   onQuickView,
+  showSinImpuestos = true,
 }) {
   // Esta línea genera un "slug" a partir del nombre del producto.
   // El slug es una versión del nombre en minúsculas, sin espacios ni caracteres especiales,
@@ -46,9 +47,14 @@ export default function ProductCard({
         <div className="text-xs text-muted mb-1 text-center">
           {brand} {weight && `· ${weight}`}
         </div>
-        <div className="text-primary font-bold text-lg sm:text-xl mb-2 text-center">
+        <div className="text-primary font-bold text-lg sm:text-xl mb-1 text-center">
           ${price}
         </div>
+        {showSinImpuestos && (
+          <div className="text-xs text-gray-400 text-center mb-2">
+            Precio sin impuestos nacionales: ${Math.round(price / 1.21)}
+          </div>
+        )}
       </Link>
       <div className="flex w-full gap-2 mt-auto px-2 pb-3">
         <button

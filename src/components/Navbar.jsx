@@ -85,7 +85,7 @@ export default function Navbar() {
             className="hidden sm:inline font-black text-dark tracking-tight text-2xl"
             style={{ letterSpacing: "-0.03em" }}
           >
-            Supermercado G5
+            Supermercado G4
           </span>
         </Link>
 
@@ -260,6 +260,7 @@ export default function Navbar() {
                   >
                     Mis direcciones
                   </Link>
+
                   {usuario?.rol === "ADMIN" && (
                   // uso solo el doble igual para que no considere mayusculas y minúsculas
                   <Link
@@ -270,6 +271,15 @@ export default function Navbar() {
                     Admin
                   </Link>
                   )}
+                  <Link
+                    to="/mis-pedidos"
+                    className="block px-4 py-2 text-dark hover:bg-accent/40 hover:text-primary rounded transition"
+                    onClick={() => setUserDropdown(false)}
+                  >
+                    Mis Pedidos
+                  </Link>
+                  {/* aca van mas opciones aca si necesitamos */}
+
                   <button
                     onClick={() => {
                       setUserDropdown(false);
