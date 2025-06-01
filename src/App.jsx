@@ -19,6 +19,11 @@ import AdminPage from "./pages/AdminPage";
 import ProductDetailPage from "./pages/ProductDetailPage";
 import MisPedidosPage from "./pages/MisPedidosPage";
 import PedidoDetallePage from "./pages/PedidoDetallePage";
+import FinalizarCompraPage from "./pages/FinalizarCompraPage";
+import StepComprobante from "./pages/StepComprobante";
+import StepEntrega from "./pages/StepEntrega";
+import StepPago from "./pages/StepPago";
+
 import "./App.css";
 
 function App() {
@@ -41,11 +46,33 @@ function App() {
           <Route element={<ProtectedRoute />}>
             <Route path="/carrito" element={<CartPage />} />
             <Route path="/perfil" element={<ProfilePage />} />
-            <Route path="/cambiar-contrasena" element={<ResetPasswordPageLog />} />
-            <Route path="/editar-producto/:id" element={<ProductEditPage modo="editar" />} />
-            <Route path="/crear-producto" element={<ProductEditPage modo="crear" />} />
-            <Route path="/editar-categoria/:id" element={<CategoryEditPage modo="editar" />} />
-            <Route path="/crear-categoria" element={<CategoryEditPage modo="crear" />} />
+            <Route
+              path="/cambiar-contrasena"
+              element={<ResetPasswordPageLog />}
+            />
+            <Route path="/finalizar-compra" element={<FinalizarCompraPage />} />
+            <Route path="/step-comprobante" element={<StepComprobante />} />
+            <Route path="/step-entrega" element={<StepEntrega />} />
+            <Route path="/step-pago" element={<StepPago />} />
+
+            {/* Rutas de edición de productos y categorías */}
+
+            <Route
+              path="/editar-producto/:id"
+              element={<ProductEditPage modo="editar" />}
+            />
+            <Route
+              path="/crear-producto"
+              element={<ProductEditPage modo="crear" />}
+            />
+            <Route
+              path="/editar-categoria/:id"
+              element={<CategoryEditPage modo="editar" />}
+            />
+            <Route
+              path="/crear-categoria"
+              element={<CategoryEditPage modo="crear" />}
+            />
 
             {/* Rutas de admin con layout */}
             <Route path="/admin" element={<AdminPage />}>
