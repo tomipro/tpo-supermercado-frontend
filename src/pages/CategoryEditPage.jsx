@@ -28,35 +28,37 @@ export default function CategoryEditPage({ modo = "editar" }) {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
 
+  // Mueve estas funciones fuera del useEffect para poder usarlas en los handlers
+  async function fetchCategoria() {
+    try {
+      const res = await fetch(`http://localhost:4040/categorias/${id}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setCategoria(data);
+        setNombre(data.nombre);
+        setParentId(data.parentCategoria?.id || "");
+        setSubcategorias(data.subcategorias || []);
+      }
+    } catch {
+      setError("No se pudo cargar la categoría.");
+    }
+  }
+  async function fetchAllCategorias() {
+    try {
+      const res = await fetch("http://localhost:4040/categorias", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setAllCategorias(data.content || data);
+      }
+    } catch {}
+  }
+
   // Carga inicial
   useEffect(() => {
-    async function fetchCategoria() {
-      try {
-        const res = await fetch(`http://localhost:4040/categorias/${id}`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        if (res.ok) {
-          const data = await res.json();
-          setCategoria(data);
-          setNombre(data.nombre);
-          setParentId(data.parentCategoria?.id || "");
-          setSubcategorias(data.subcategorias || []);
-        }
-      } catch {
-        setError("No se pudo cargar la categoría.");
-      }
-    }
-    async function fetchAllCategorias() {
-      try {
-        const res = await fetch("http://localhost:4040/categorias", {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        if (res.ok) {
-          const data = await res.json();
-          setAllCategorias(data.content || data);
-        }
-      } catch {}
-    }
     if (modo === "editar") fetchCategoria();
     fetchAllCategorias();
   }, [id, token, modo]);
@@ -68,7 +70,6 @@ export default function CategoryEditPage({ modo = "editar" }) {
   // Agregar subcategoría
   const handleAddSubcategoria = async () => {
     if (!selectedSubId) return;
-    setError("");
     const catToAdd = allCategorias.find((c) => c.id === selectedSubId);
     if (!catToAdd) return;
 
@@ -77,62 +78,51 @@ export default function CategoryEditPage({ modo = "editar" }) {
       setAllCategorias(allCategorias.filter((c) => c.id !== catToAdd.id));
       setSelectedSubId("");
     } else {
-      try {
-        const res = await fetch(
-          `http://localhost:4040/categorias/${catToAdd.id}`,
-          {
-            method: "PUT",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${token}`,
-            },
-            body: JSON.stringify({
-              nombre: catToAdd.nombre,
-              parentId: categoria.id,
-            }),
-          }
-        );
-        if (res.ok) {
-          const updated = await res.json();
-          setSubcategorias([...subcategorias, updated]);
-          setAllCategorias(allCategorias.filter((c) => c.id !== updated.id));
-          setSelectedSubId("");
+      const res = await fetch(
+        `http://localhost:4040/categorias/${catToAdd.id}`,
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            nombre: catToAdd.nombre,
+            parentId: categoria.id,
+          }),
         }
-      } catch {
-        setError("No se pudo agregar la subcategoría.");
+      );
+      if (res.ok) {
+        setSelectedSubId("");
+        await fetchCategoria();
+        await fetchAllCategorias();
       }
     }
   };
 
   // Quitar subcategoría
   const handleRemoveSubcategoria = async (sub) => {
-    setError("");
     if (modo === "crear") {
       setSubcategorias(subcategorias.filter((s) => s.id !== sub.id));
       setAllCategorias([...allCategorias, sub]);
     } else {
-      try {
-        const res = await fetch(
-          `http://localhost:4040/categorias/${sub.id}`,
-          {
-            method: "PUT",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${token}`,
-            },
-            body: JSON.stringify({
-              nombre: sub.nombre,
-              parentId: null,
-            }),
-          }
-        );
-        if (res.ok) {
-          const updated = await res.json();
-          setSubcategorias(subcategorias.filter((s) => s.id !== sub.id));
-          setAllCategorias([...allCategorias, updated]);
+      const res = await fetch(
+        `http://localhost:4040/categorias/${sub.id}`,
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            nombre: sub.nombre,
+            parentId: null,
+          }),
         }
-      } catch {
-        setError("No se pudo quitar la subcategoría.");
+      );
+      if (res.ok) {
+        await fetchCategoria();
+        await fetchAllCategorias();
       }
     }
   };
@@ -247,35 +237,15 @@ export default function CategoryEditPage({ modo = "editar" }) {
         </div>
         <div className="mt-6">
           <label className="font-semibold">Subcategorías</label>
-          <div className="flex items-center space-x-2 mb-2">
-            <select
-              className="input flex-1"
-              value={selectedSubId}
-              onChange={(e) => setSelectedSubId(e.target.value)}
-            >
-              <option value="">-- Seleccionar categoría --</option>
-              {allCategorias
-                .filter(
-                  (c) =>
-                    !c.parentCategoria &&
-                    c.id !== categoria?.id &&
-                    !subcategorias.some((s) => s.id === c.id)
-                )
-                .map((c) => (
-                  <option key={c.id} value={c.id}>{c.nombre}</option>
-                ))}
-            </select>
-            <button
-              type="button"
-              onClick={handleAddSubcategoria}
-              className="px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded font-semibold transition-colors text-sm"
-            >
-              Agregar
-            </button>
-          </div>
-          {subcategorias.length > 0 ? (
+          {(modo === "editar"
+            ? categoria?.subcategorias || []
+            : subcategorias
+          ).length > 0 ? (
             <ul className="list-disc ml-6">
-              {subcategorias.map((sub) => (
+              {(modo === "editar"
+                ? categoria?.subcategorias || []
+                : subcategorias
+              ).map((sub) => (
                 <li
                   key={sub.id}
                   className="flex justify-between items-center"

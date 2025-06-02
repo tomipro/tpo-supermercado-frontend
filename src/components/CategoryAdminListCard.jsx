@@ -10,9 +10,11 @@ export default function CategoryAdminListCard({
       <h3 className="text-lg font-bold">{categoria.nombre}</h3>
       <div>
         <span className="font-semibold">Categoría padre: </span>
-        {categoria.parentCategoria
-          ? categoria.parentCategoria.nombre
-          : <span className="text-gray-500">No tiene</span>}
+        {categoria.parentNombre ? (
+          categoria.parentNombre
+        ) : (
+          <span className="text-gray-500">No tiene</span>
+        )}
       </div>
       <div>
         <span className="font-semibold">Subcategorías: </span>
