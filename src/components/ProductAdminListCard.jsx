@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom'
 
 export default function ProductAdminListCard({
+  id,
   name,
   brand,
   price,
@@ -22,7 +23,7 @@ export default function ProductAdminListCard({
       tabIndex={0}
     >
       <Link
-        to={`/producto/${slug}`}
+        to={id ? `/producto/id/${id}` : `/producto/${slug}`}
         className="flex flex-col items-center flex-1 px-2 pt-4 pb-2"
         tabIndex={-1}
         aria-label={`Ir a la página de ${name}`}

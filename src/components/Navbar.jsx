@@ -1,6 +1,7 @@
 import { Link, NavLink, useNavigate } from "react-router-dom";
 import { useState, useEffect, useRef } from "react";
 import { useAuth } from "../auth/AuthProvider";
+import { useCart } from "../context/CartContext";
 // todas estas cosas vuelan cuando integro con el back
 // osea provisorio por ahora
 
@@ -40,9 +41,13 @@ export default function Navbar() {
   const [mobileDropdown, setMobileDropdown] = useState(null);
   const [userDropdown, setUserDropdown] = useState(false);
   const userDropdownRef = useRef(null);
-  const navigate = useNavigate();
-  //Esto permite que el navbar sepa si el usuario está autenticado y quién es
   const { usuario, isAuthenticated, logout } = useAuth();
+  const { carrito, loading } = useCart();
+  const navigate = useNavigate();
+  const totalItems = carrito?.items?.reduce(
+    (sum, item) => sum + (item.cantidad || 0),
+    0
+  );
 
   function handleSearchSubmit(e) {
     e.preventDefault();
@@ -205,13 +210,162 @@ export default function Navbar() {
               />
             </svg>
           </button>
-          <NavLink
-            to="/carrito"
-            className="relative group p-2 rounded-full hover:bg-accent/60 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
-            aria-label="Carrito"
-          >
-            <span className="text-2xl text-secondary">🛒</span>
-          </NavLink>
+          <div className="relative group">
+            <button
+              className="relative"
+              onClick={() => navigate("/carrito")}
+              aria-label="Ver carrito"
+            >
+              {/* Icono de carrito SVG */}
+              <svg
+                className="w-8 h-8 text-primary"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth={2}
+                viewBox="0 0 24 24"
+              >
+                <circle cx="9" cy="21" r="1.5" />
+                <circle cx="18" cy="21" r="1.5" />
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M3 5h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 7M7 13l-2 4h13"
+                />
+              </svg>
+              {totalItems > 0 && (
+                <span className="absolute -top-2 -right-2 bg-red-600 text-white text-xs font-bold rounded-full px-2 py-0.5">
+                  {totalItems}
+                </span>
+              )}
+            </button>
+            {/* Hover: muestra productos del carrito */}
+            <div className="absolute right-0 mt-2 w-80 bg-white rounded-xl shadow-lg border border-gray-200 z-50 opacity-0 group-hover:opacity-100 pointer-events-none group-hover:pointer-events-auto transition-opacity duration-200">
+              <div className="p-4">
+                <div className="font-bold mb-2 text-primary">Carrito</div>
+                {loading ? (
+                  <div className="text-gray-400 text-sm">Cargando...</div>
+                ) : carrito?.items?.length === 0 ? (
+                  <div className="text-gray-400 text-sm">
+                    Tu carrito está vacío.
+                  </div>
+                ) : (
+                  <>
+                    <ul className="divide-y divide-gray-100 max-h-60 overflow-y-auto">
+                      {carrito.items.slice(0, 5).map((item) => (
+                        <li
+                          key={item.productoId}
+                          className="py-2 flex items-center gap-2"
+                        >
+                          {/* Quitar la imagen del producto */}
+                          {/* <img
+                            src={
+                              (item.imagenes && Array.isArray(item.imagenes) && (
+                                item.imagenes[0]?.imagen ||
+                                (typeof item.imagenes[0] === "string" && item.imagenes[0])
+                              )) ||
+                              (item.productoId && typeof imagenesProductos === "object" && imagenesProductos[item.productoId]) ||
+                              ""
+                            }
+                            alt={item.nombreProducto}
+                            className="w-10 h-10 object-cover rounded border"
+                            onError={e => { e.target.src = ""; }}
+                          /> */}
+                          <div className="flex-1">
+                            <div className="font-semibold text-sm">
+                              {item.nombreProducto}
+                            </div>
+                            <div className="text-xs text-gray-500">
+                              x{item.cantidad}
+                            </div>
+                            <div className="text-xs text-gray-700">
+                              {/* Precio unitario */}
+                              {item.precioUnitario !== undefined && item.precioUnitario !== null
+                                ? `Precio: $${Number(item.precioUnitario).toFixed(2)}`
+                                : ""}
+                            </div>
+                            <div className="text-[10px] text-gray-400">
+                              {/* Precio sin impuestos nacionales */}
+                              {item.precioUnitario !== undefined && item.precioUnitario !== null
+                                ? `Sin IVA: $${Math.round(Number(item.precioUnitario) / 1.21)}`
+                                : ""}
+                            </div>
+                          </div>
+                          <div className="text-sm font-bold text-primary text-right min-w-[60px]">
+                            {/* Subtotal por producto */}
+                            {item.subtotal !== undefined && item.subtotal !== null
+                              ? `$${Number(item.subtotal).toFixed(2)}`
+                              : (item.precioUnitario !== undefined && item.cantidad !== undefined
+                                ? `$${(Number(item.precioUnitario) * Number(item.cantidad)).toFixed(2)}`
+                                : "-")}
+                            <div className="text-[10px] text-gray-400 font-normal">
+                              {/* Subtotal sin IVA */}
+                              {(item.precioUnitario !== undefined && item.cantidad !== undefined)
+                                ? `Sin IVA: $${Math.round((Number(item.precioUnitario) * Number(item.cantidad)) / 1.21)}`
+                                : ""}
+                            </div>
+                          </div>
+                        </li>
+                      ))}
+                    </ul>
+                    {/* Total del carrito */}
+                    <div className="mt-3 flex flex-col gap-1 border-t pt-3">
+                      <div className="flex justify-between items-center">
+                        <span className="font-semibold text-gray-700">Total:</span>
+                        <span className="font-bold text-lg text-green-700">
+                          {(carrito.total !== undefined && carrito.total !== null && !isNaN(Number(carrito.total)))
+                            ? `$${Number(carrito.total).toFixed(2)}`
+                            : (() => {
+                                const total = carrito.items.reduce((sum, item) => {
+                                  if (item.subtotal !== undefined && item.subtotal !== null && !isNaN(Number(item.subtotal))) {
+                                    return sum + Number(item.subtotal);
+                                  }
+                                  if (item.precioUnitario !== undefined && item.cantidad !== undefined) {
+                                    return sum + (Number(item.precioUnitario) * Number(item.cantidad));
+                                  }
+                                  return sum;
+                                }, 0);
+                                return `$${total.toFixed(2)}`;
+                              })()
+                          }
+                        </span>
+                      </div>
+                      <div className="flex justify-between items-center text-[12px] text-gray-500">
+                        <span>Sin IVA (21%):</span>
+                        <span>
+                          {(() => {
+                            // Calcula el total sin IVA
+                            let total = 0;
+                            if (carrito.total !== undefined && carrito.total !== null && !isNaN(Number(carrito.total))) {
+                              total = Number(carrito.total);
+                            } else {
+                              total = carrito.items.reduce((sum, item) => {
+                                if (item.subtotal !== undefined && item.subtotal !== null && !isNaN(Number(item.subtotal))) {
+                                  return sum + Number(item.subtotal);
+                                }
+                                if (item.precioUnitario !== undefined && item.cantidad !== undefined) {
+                                  return sum + (Number(item.precioUnitario) * Number(item.cantidad));
+                                }
+                                return sum;
+                              }, 0);
+                            }
+                            return `$${Math.round(total / 1.21)}`;
+                          })()}
+                        </span>
+                      </div>
+                    </div>
+                  </>
+                )}
+                <div className="mt-3 text-right">
+                  <Link
+                    to="/carrito"
+                    className="text-primary font-semibold hover:underline text-sm"
+                  >
+                    Ver carrito →
+                  </Link>
+                </div>
+              </div>
+            </div>
+          </div>
           {isAuthenticated ? (
             <div
               className="hidden sm:flex items-center gap-2 relative"

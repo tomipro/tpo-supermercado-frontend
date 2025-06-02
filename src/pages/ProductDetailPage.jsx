@@ -1,5 +1,7 @@
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
+import { useAuth } from "../auth/AuthProvider";
+import { useCart } from "../context/CartContext";
 
 // Simulación de productos con más detalles
 const destacados = [
@@ -114,18 +116,80 @@ function slugify(name) {
 const FALLBACK_IMG = "https://cdn-icons-png.flaticon.com/512/1046/1046857.png";
 
 export default function ProductDetailPage() {
-	const { slug } = useParams();
+	const { slug, id } = useParams();
 	const navigate = useNavigate();
+	const { token } = useAuth();
+	const { refreshCarrito } = useCart();
 	const [product, setProduct] = useState(null);
 	const [mainImgIdx, setMainImgIdx] = useState(0);
 	const [qty, setQty] = useState(1);
+	const [loading, setLoading] = useState(true);
+	const [addCartLoading, setAddCartLoading] = useState(false);
+	const [addCartMsg, setAddCartMsg] = useState("");
 
 	useEffect(() => {
-		const found = destacados.find(p => slugify(p.name) === slug);
-		setProduct(found || null);
-		setMainImgIdx(0);
-		setQty(1);
-	}, [slug]);
+		setLoading(true);
+		if (id) {
+			fetch(`http://localhost:4040/producto/id/${id}`)
+				.then(res => {
+					if (!res.ok) throw new Error("No encontrado");
+					return res.json();
+				})
+				.then(data => {
+					// Si el backend devuelve null, undefined o un objeto vacío, muestra "no encontrado"
+					if (!data || typeof data !== "object" || Object.keys(data).length === 0) {
+						setProduct(null);
+					} else {
+						setProduct(data);
+					}
+					setMainImgIdx(0);
+					setQty(1);
+					setLoading(false);
+				})
+				.catch(() => {
+					setProduct(null);
+					setLoading(false);
+				});
+		} else if (slug) {
+			const found = destacados.find(p => slugify(p.name) === slug);
+			setProduct(found || null);
+			setMainImgIdx(0);
+			setQty(1);
+			setLoading(false);
+		} else {
+			setProduct(null);
+			setLoading(false);
+		}
+	// eslint-disable-next-line
+	}, [slug, id]);
+
+	// Skeleton loading UI
+	if (loading) {
+		return (
+			<div className="max-w-5xl mx-auto mt-10 px-2 sm:px-6 animate-pulse">
+				<div className="h-6 w-1/3 bg-gray-200 rounded mb-6" />
+				<div className="flex flex-col md:flex-row gap-10">
+					<div className="flex flex-col items-center md:items-start gap-4 flex-1 min-w-[260px]">
+						<div className="w-64 h-64 bg-gray-200 rounded-2xl mb-4" />
+						<div className="flex gap-2 mt-2">
+							{Array.from({ length: 3 }).map((_, i) => (
+								<div key={i} className="w-16 h-16 bg-gray-200 rounded-lg" />
+							))}
+						</div>
+					</div>
+					<div className="flex-1 flex flex-col gap-2">
+						<div className="h-8 w-2/3 bg-gray-200 rounded mb-2" />
+						<div className="h-5 w-1/3 bg-gray-100 rounded mb-2" />
+						<div className="h-4 w-1/4 bg-gray-100 rounded mb-2" />
+						<div className="h-10 w-1/4 bg-gray-200 rounded mb-2" />
+						<div className="h-4 w-1/2 bg-gray-100 rounded mb-2" />
+						<div className="h-20 w-full bg-gray-100 rounded mb-2" />
+						<div className="h-8 w-1/3 bg-gray-200 rounded mb-2" />
+					</div>
+				</div>
+			</div>
+		);
+	}
 
 	if (!product) {
 		return (
@@ -141,14 +205,75 @@ export default function ProductDetailPage() {
 		);
 	}
 
-	const mainImg = product.img[mainImgIdx] || FALLBACK_IMG;
-	const relacionados = destacados.filter(p => p.category === product.category && p.name !== product.name).slice(0, 3);
+	// Unifica imágenes
+	const images =
+		(Array.isArray(product.imagenes) && product.imagenes.map(img => img.imagen || img.url || img))
+		|| (Array.isArray(product.img) && product.img)
+		|| [];
+
+	const mainImg = images[mainImgIdx] || FALLBACK_IMG;
+
+	// Unifica campos
+	const nombre = product.nombre || product.name || "";
+	const descripcion = product.descripcion || product.description || "";
+	const marca = product.marca || product.brand || "";
+	const precio = product.precio ?? product.price ?? "";
+	const peso = product.unidad_medida || product.weight || "";
+	const descuento = product.descuento ?? product.offer ?? "";
+	const bestSeller = product.bestSeller;
+	// Mejorar obtención de categoría y subcategoría
+	const categoriaObj = product.categoria || {};
+	const subcategoriaObj = product.subcategoria || {};
+	const categoriaNombre =
+		(typeof categoriaObj === "string" && categoriaObj) ||
+		categoriaObj.nombre ||
+		product.category ||
+		"";
+	const subcategoriaNombre =
+		(typeof subcategoriaObj === "string" && subcategoriaObj) ||
+		subcategoriaObj.nombre ||
+		product.subcategory ||
+		"";
+	const stock = product.stock ?? 0;
+	const sku = product.sku || product.codigo || "";
+	const origen = product.origen || product.origin || "";
+	const ingredientes = product.ingredientes || product.ingredients || "";
+
+	const relacionados = destacados.filter(p =>
+		(p.category === (product.category || product.categoria?.nombre)) &&
+		(p.name !== (product.name || product.nombre))
+	).slice(0, 3);
 
 	function handlePrevImg() {
-		setMainImgIdx(idx => (idx - 1 + product.img.length) % product.img.length);
+		setMainImgIdx(idx => (idx - 1 + images.length) % images.length);
 	}
 	function handleNextImg() {
-		setMainImgIdx(idx => (idx + 1) % product.img.length);
+		setMainImgIdx(idx => (idx + 1) % images.length);
+	}
+
+	async function handleAddToCart() {
+		if (!product?.id || !qty) return;
+		setAddCartLoading(true);
+		setAddCartMsg("");
+		try {
+			const res = await fetch(`http://localhost:4040/carritos/${product.id}?cantidad=${qty}`, {
+				method: "PATCH",
+				headers: {
+					"Content-Type": "application/json",
+					Authorization: `Bearer ${token}`,
+				},
+			});
+			if (res.ok) {
+				setAddCartMsg("Producto agregado al carrito.");
+				refreshCarrito();
+			} else {
+				setAddCartMsg("No se pudo agregar al carrito.");
+			}
+		} catch {
+			setAddCartMsg("No se pudo agregar al carrito.");
+		}
+		setAddCartLoading(false);
+		setTimeout(() => setAddCartMsg(""), 2000);
 	}
 
 	return (
@@ -182,16 +307,30 @@ export default function ProductDetailPage() {
 				{/* Breadcrumb */}
 				<nav className="mb-2 text-sm text-muted flex gap-2 items-center">
 					<Link to="/" className="hover:underline text-primary">Inicio</Link>
-					<span>/</span>
-					<Link to={`/categorias?cat=${product.category?.toLowerCase()}`} className="hover:underline text-primary">{product.category}</Link>
-					{product.subcategory && (
+					{categoriaNombre && (
 						<>
-							<span>/</span>
-							<Link to={`/categorias?cat=${product.category?.toLowerCase()}&sub=${product.subcategory?.toLowerCase()}`} className="hover:underline text-primary">{product.subcategory}</Link>
+							<span className="mx-1">/</span>
+							<Link
+								to={`/categorias?cat=${categoriaNombre.toLowerCase()}`}
+								className="hover:underline text-primary"
+							>
+								{categoriaNombre}
+							</Link>
 						</>
 					)}
-					<span>/</span>
-					<span className="text-dark">{product.name}</span>
+					{subcategoriaNombre && (
+						<>
+							<span className="mx-1">/</span>
+							<Link
+								to={`/categorias?cat=${categoriaNombre.toLowerCase()}&sub=${subcategoriaNombre.toLowerCase()}`}
+								className="hover:underline text-primary"
+							>
+								{subcategoriaNombre}
+							</Link>
+						</>
+					)}
+					<span className="mx-1">/</span>
+					<span className="text-dark">{nombre}</span>
 				</nav>
 				{/* Main layout */}
 				<div className="flex flex-col md:flex-row gap-10">
@@ -200,11 +339,11 @@ export default function ProductDetailPage() {
 						<div className="relative w-64 h-64 bg-white rounded-2xl shadow-xl flex items-center justify-center overflow-hidden border border-gray-100">
 							<img
 								src={mainImg}
-								alt={product.name}
+								alt={nombre}
 								className="object-contain w-full h-full"
 								onError={e => { e.target.src = FALLBACK_IMG }}
 							/>
-							{product.img.length > 1 && (
+							{images.length > 1 && (
 								<>
 									<button
 										className="absolute left-2 top-1/2 -translate-y-1/2 bg-white/90 hover:bg-primary/90 text-primary hover:text-white rounded-full w-9 h-9 flex items-center justify-center shadow transition border border-gray-200"
@@ -250,7 +389,7 @@ export default function ProductDetailPage() {
 							)}
 						</div>
 						<div className="flex gap-2 mt-2">
-							{product.img.map((img, i) => (
+							{images.map((img, i) => (
 								<button
 									key={i}
 									className={`w-16 h-16 rounded-lg border-2 ${mainImgIdx === i ? "border-primary ring-2 ring-primary" : "border-gray-200"} overflow-hidden bg-white shadow-sm transition`}
@@ -267,31 +406,31 @@ export default function ProductDetailPage() {
 					</div>
 					{/* Info principal */}
 					<div className="flex-1 flex flex-col gap-2">
-						<h1 className="text-3xl font-bold mb-1 text-primary drop-shadow-sm">{product.name}</h1>
-						<div className="text-lg text-muted mb-1">{product.brand} {product.weight && `· ${product.weight}`}</div>
+						<h1 className="text-3xl font-bold mb-1 text-primary drop-shadow-sm">{nombre}</h1>
+						<div className="text-lg text-muted mb-1">{marca} {peso && `· ${peso}`}</div>
 						<div className="flex gap-2 mb-2">
-							{product.offer && (
+							{descuento && (
 								<span className="inline-block bg-accent text-dark text-xs font-bold px-2 py-0.5 rounded-full shadow">
-									{product.offer}
+									{typeof descuento === "string" ? descuento : `${descuento}% OFF`}
 								</span>
 							)}
-							{product.bestSeller && (
+							{bestSeller && (
 								<span className="inline-block bg-secondary text-white text-xs font-bold px-2 py-0.5 rounded-full shadow">
 									Más vendido
 								</span>
 							)}
 						</div>
-						<div className="text-2xl font-bold text-primary mb-2 drop-shadow">${product.price}</div>
+						<div className="text-2xl font-bold text-primary mb-2 drop-shadow">${precio}</div>
 						<div className="text-xs text-gray-400 mb-2">
-							Precio sin impuestos nacionales: ${Math.round(product.price / 1.21)}
+							Precio sin impuestos nacionales: ${precio ? Math.round(precio / 1.21) : 0}
 						</div>
-						<div className="mb-2 text-gray-700">{product.description}</div>
+						<div className="mb-2 text-gray-700">{descripcion}</div>
 						<div className="flex items-center gap-4 mb-4">
-							<span className={`text-sm font-medium ${product.stock > 5 ? 'text-secondary' : 'text-red-500'}`}>
-								{product.stock > 5 ? 'En stock' : 'Últimas unidades'}
+							<span className={`text-sm font-medium ${stock > 5 ? 'text-secondary' : 'text-red-500'}`}>
+								{stock > 5 ? 'En stock' : 'Últimas unidades'}
 							</span>
-							<span className="text-xs text-gray-400">SKU: {product.sku}</span>
-							<span className="text-xs text-gray-400">Origen: {product.origin}</span>
+							{sku && <span className="text-xs text-gray-400">SKU: {sku}</span>}
+							{origen && <span className="text-xs text-gray-400">Origen: {origen}</span>}
 						</div>
 						{/* Cantidad y agregar */}
 						<div className="flex items-center gap-3 mb-4">
@@ -300,27 +439,37 @@ export default function ProductDetailPage() {
 								id="qty"
 								type="number"
 								min={1}
-								max={product.stock}
+								max={stock}
 								value={qty}
-								onChange={e => setQty(Math.max(1, Math.min(product.stock, Number(e.target.value))))}
+								onChange={e => setQty(Math.max(1, Math.min(stock, Number(e.target.value))))}
 								className="w-20 px-2 py-1 border border-gray-200 rounded text-center focus:ring-2 focus:ring-primary"
 							/>
 							<button
 								className="bg-primary hover:bg-secondary text-white font-semibold px-6 py-2 rounded-lg shadow transition text-base"
-								onClick={() => {/* lógica agregar al carrito */}}
+								onClick={handleAddToCart}
+								disabled={addCartLoading}
 							>
-								Agregar al carrito
+								{addCartLoading ? "Agregando..." : "Agregar al carrito"}
 							</button>
+							{addCartMsg && (
+								<span className="ml-2 text-green-600 text-sm">{addCartMsg}</span>
+							)}
 						</div>
 						{/* Categoría y subcategoría */}
 						<div className="flex gap-2 text-sm text-muted mb-2">
 							<span>Categoría:</span>
-							<Link to={`/categorias?cat=${product.category?.toLowerCase()}`} className="text-primary hover:underline">{product.category}</Link>
-							{product.subcategory && (
+							{categoriaNombre ? (
 								<>
-									<span>/</span>
-									<Link to={`/categorias?cat=${product.category?.toLowerCase()}&sub=${product.subcategory?.toLowerCase()}`} className="text-primary hover:underline">{product.subcategory}</Link>
+									<Link to={`/categorias?cat=${categoriaNombre.toLowerCase()}`} className="text-primary hover:underline">{categoriaNombre}</Link>
+									{subcategoriaNombre && (
+										<>
+											<span>/</span>
+											<Link to={`/categorias?cat=${categoriaNombre.toLowerCase()}&sub=${subcategoriaNombre.toLowerCase()}`} className="text-primary hover:underline">{subcategoriaNombre}</Link>
+										</>
+									)}
 								</>
+							) : (
+								<span className="text-gray-400">Sin categoría</span>
 							)}
 						</div>
 					</div>
@@ -331,12 +480,14 @@ export default function ProductDetailPage() {
 					<div className="bg-white rounded-xl shadow-lg p-6 border border-gray-100">
 						<h2 className="text-xl font-bold mb-3 text-dark">Ficha técnica</h2>
 						<ul className="text-gray-700 text-base space-y-2">
-							<li><span className="font-semibold">Marca:</span> {product.brand}</li>
-							<li><span className="font-semibold">Peso/Contenido:</span> {product.weight}</li>
-							<li><span className="font-semibold">Origen:</span> {product.origin}</li>
-							<li><span className="font-semibold">SKU:</span> {product.sku}</li>
-							<li><span className="font-semibold">Stock disponible:</span> {product.stock}</li>
-							<li><span className="font-semibold">Ingredientes:</span> {product.ingredients}</li>
+							<li><span className="font-semibold">Marca:</span> {marca}</li>
+							<li><span className="font-semibold">Peso/Contenido:</span> {peso}</li>
+							{categoriaNombre && <li><span className="font-semibold">Categoría:</span> {categoriaNombre}</li>}
+							{subcategoriaNombre && <li><span className="font-semibold">Subcategoría:</span> {subcategoriaNombre}</li>}
+							{origen && <li><span className="font-semibold">Origen:</span> {origen}</li>}
+							{sku && <li><span className="font-semibold">SKU:</span> {sku}</li>}
+							<li><span className="font-semibold">Stock disponible:</span> {stock}</li>
+							{ingredientes && <li><span className="font-semibold">Ingredientes:</span> {ingredientes}</li>}
 						</ul>
 					</div>
 				</div>
