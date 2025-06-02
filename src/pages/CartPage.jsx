@@ -4,6 +4,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { FaTrash, FaPlus, FaMinus, FaShoppingCart } from "react-icons/fa";
 import dinoPensativo from "../assets/dino_pensativo.png";
+import { useCart } from "../context/CartContext";
 
 // Muestra un mensaje  y imagen del dino cuando el carrito está vacío
 function CarritoVacio() {
@@ -54,52 +55,15 @@ function CarritoVacio() {
 // Página principal del carrito
 export default function CartPage() {
   // Estado principal del carrito y su carga
-  const [carrito, setCarrito] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-
-  // Estado para imágenes por productoId
+  const { carrito, setCarrito, loading, error, refreshCarrito } = useCart();
   const [imagenesProductos, setImagenesProductos] = useState({});
-
   const { token } = useAuth();
   const navigate = useNavigate();
 
-  // Trae el carrito al cargar la página
+  // Trae el carrito al cargar la página o cuando cambia el token
   useEffect(() => {
-    fetch("http://localhost:4040/carritos", {
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      },
-    })
-      .then((res) => {
-        if (res.status === 403) throw new Error("No autorizado. Iniciá sesión para ver tu carrito.");
-        if (res.status === 404) throw new Error("No se encontró el carrito.");
-        if (!res.ok) throw new Error("No se pudo cargar el carrito");
-        return res.json();
-      })
-      .then((data) => {
-        // Asegura que data tenga la estructura esperada y que items sea array
-        if (!data || typeof data !== "object" || !Array.isArray(data.items)) {
-          setCarrito({ items: [], total: 0 });
-        } else {
-          // Si algún item es null o no tiene productoId, filtralo
-          const items = Array.isArray(data.items)
-            ? data.items.filter(
-                (item) =>
-                  item &&
-                  typeof item === "object" &&
-                  typeof item.productoId !== "undefined"
-              )
-            : [];
-          setCarrito({ ...data, items });
-        }
-        setLoading(false);
-      })
-      .catch((err) => {
-        setError(err.message || "No se pudo cargar el carrito. Intenta de nuevo.");
-        setLoading(false);
-      });
+    refreshCarrito();
+    // eslint-disable-next-line
   }, [token]);
 
   // Trae imágenes de los productos del carrito (si hace falta)
@@ -124,7 +88,27 @@ export default function CartPage() {
     // eslint-disable-next-line
   }, [carrito]);
 
-  // Cambia la cantidad de un producto en el carrito (+1 o -1)
+  // Disminuye cantidad o elimina si queda solo uno
+  const handleDecrement = async (item) => {
+    try {
+      const res = await fetch(
+        `http://localhost:4040/carritos/${item.productoId}`,
+        {
+          method: "DELETE",
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+      if (!res.ok) throw new Error("No se pudo eliminar/restar el producto.");
+      await res.json();
+      await refreshCarrito(); // Espera a que el contexto se actualice antes de continuar
+    } catch (e) {
+      setError("No se pudo eliminar/restar el producto. Intenta de nuevo.");
+    }
+  };
+
+  // Cambia la cantidad de un producto en el carrito (+1)
   const handleChangeCantidad = async (productoId, change) => {
     try {
       const res = await fetch(
@@ -138,8 +122,8 @@ export default function CartPage() {
         }
       );
       if (!res.ok) throw new Error("No se pudo modificar la cantidad.");
-      const data = await res.json();
-      setCarrito(data);
+      await res.json();
+      await refreshCarrito();
     } catch (e) {
       setError("No se pudo modificar la cantidad. Intenta de nuevo.");
     }
@@ -160,19 +144,10 @@ export default function CartPage() {
         }
       );
       if (!res.ok) throw new Error("No se pudo eliminar el producto.");
-      const data = await res.json();
-      setCarrito(data);
+      await res.json();
+      await refreshCarrito();
     } catch (e) {
       setError("No se pudo eliminar el producto. Intenta de nuevo.");
-    }
-  };
-
-  // Disminuye cantidad o elimina si queda solo uno
-  const handleDecrement = (item) => {
-    if (item.cantidad === 1) {
-      handleEliminar(item.productoId);
-    } else {
-      handleChangeCantidad(item.productoId, -1);
     }
   };
 
@@ -213,9 +188,7 @@ export default function CartPage() {
                 {/* Imagen producto */}
                 <div className="w-20 h-20 bg-blue-100 rounded-lg flex items-center justify-center overflow-hidden border border-blue-200">
                   <img
-                    src={
-                      imagenesProductos[item.productoId] || "/placeholder.jpg"
-                    }
+                    src={imagenesProductos[item.productoId] || ""}
                     alt={item.nombreProducto}
                     className="w-full h-full object-cover"
                   />
@@ -249,17 +222,29 @@ export default function CartPage() {
                 <div className="flex flex-col items-end gap-2 min-w-[120px]">
                   <div className="text-sm text-gray-500">Precio c/u</div>
                   <div className="font-semibold text-base text-blue-700">
-                    {typeof item.precioUnitario === "number"
-                      ? `$${item.precioUnitario.toFixed(2)}`
+                    {item.precioUnitario !== undefined && item.precioUnitario !== null
+                      ? `$${Number(item.precioUnitario).toFixed(2)}`
                       : "-"}
+                  </div>
+                  <div className="text-xs text-gray-400">
+                    {item.precioUnitario !== undefined && item.precioUnitario !== null
+                      ? `Sin IVA: $${Math.round(Number(item.precioUnitario) / 1.21)}`
+                      : ""}
                   </div>
                 </div>
                 <div className="flex flex-col items-end gap-2 min-w-[120px]">
                   <div className="text-sm text-gray-500">Subtotal</div>
                   <div className="font-bold text-lg text-green-700">
-                    {typeof item.subtotal === "number"
-                      ? `$${item.subtotal.toFixed(2)}`
-                      : "-"}
+                    {item.subtotal !== undefined && item.subtotal !== null
+                      ? `$${Number(item.subtotal).toFixed(2)}`
+                      : (item.precioUnitario !== undefined && item.cantidad !== undefined
+                        ? `$${(Number(item.precioUnitario) * Number(item.cantidad)).toFixed(2)}`
+                        : "-")}
+                  </div>
+                  <div className="text-xs text-gray-400 font-normal">
+                    {(item.precioUnitario !== undefined && item.cantidad !== undefined)
+                      ? `Sin IVA: $${Math.round((Number(item.precioUnitario) * Number(item.cantidad)) / 1.21)}`
+                      : ""}
                   </div>
                 </div>
                 {/* Eliminar producto */}
@@ -273,6 +258,51 @@ export default function CartPage() {
               </motion.div>
             ))}
           </AnimatePresence>
+          {/* Total del carrito */}
+          <div className="flex flex-col gap-1 justify-end items-end px-6 py-4 border-t border-blue-100 bg-blue-50">
+            <div className="flex gap-4 items-center">
+              <span className="font-semibold text-gray-700 text-lg">Total:</span>
+              <span className="font-bold text-2xl text-green-700">
+                {(carrito.total !== undefined && carrito.total !== null && !isNaN(Number(carrito.total)))
+                  ? `$${Number(carrito.total).toFixed(2)}`
+                  : (() => {
+                      const total = carrito.items.reduce((sum, item) => {
+                        if (item.subtotal !== undefined && item.subtotal !== null && !isNaN(Number(item.subtotal))) {
+                          return sum + Number(item.subtotal);
+                        }
+                        if (item.precioUnitario !== undefined && item.cantidad !== undefined) {
+                          return sum + (Number(item.precioUnitario) * Number(item.cantidad));
+                        }
+                        return sum;
+                      }, 0);
+                      return `$${total.toFixed(2)}`;
+                    })()
+                }
+              </span>
+            </div>
+            <div className="flex gap-4 items-center text-[14px] text-gray-500">
+              <span>Sin IVA (21%):</span>
+              <span>
+                {(() => {
+                  let total = 0;
+                  if (carrito.total !== undefined && carrito.total !== null && !isNaN(Number(carrito.total))) {
+                    total = Number(carrito.total);
+                  } else {
+                    total = carrito.items.reduce((sum, item) => {
+                      if (item.subtotal !== undefined && item.subtotal !== null && !isNaN(Number(item.subtotal))) {
+                        return sum + Number(item.subtotal);
+                      }
+                      if (item.precioUnitario !== undefined && item.cantidad !== undefined) {
+                        return sum + (Number(item.precioUnitario) * Number(item.cantidad));
+                      }
+                      return sum;
+                    }, 0);
+                  }
+                  return `$${Math.round(total / 1.21)}`;
+                })()}
+              </span>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -292,18 +322,23 @@ export default function CartPage() {
           </div>
           <div className="flex justify-between text-gray-700 text-base mb-1">
             <span>Total</span>
-            <motion.span
-              className="font-bold text-green-700"
-              key={carrito.total}
-              initial={{ scale: 1.2, color: "#1e88e5" }}
-              animate={{ scale: 1, color: "#059669" }}
-              transition={{ duration: 0.3 }}
-            >
-              {/* Evita error si carrito.total es undefined o null */}
-              {typeof carrito.total === "number"
-                ? `$${carrito.total.toFixed(2)}`
-                : "-"}
-            </motion.span>
+            <span className="font-bold text-green-700">
+              {(carrito.total !== undefined && carrito.total !== null && !isNaN(Number(carrito.total)))
+                ? `$${Number(carrito.total).toFixed(2)}`
+                : (() => {
+                    const total = carrito.items.reduce((sum, item) => {
+                      if (item.subtotal !== undefined && item.subtotal !== null && !isNaN(Number(item.subtotal))) {
+                        return sum + Number(item.subtotal);
+                      }
+                      if (item.precioUnitario !== undefined && item.cantidad !== undefined) {
+                        return sum + (Number(item.precioUnitario) * Number(item.cantidad));
+                      }
+                      return sum;
+                    }, 0);
+                    return `$${total.toFixed(2)}`;
+                  })()
+              }
+            </span>
           </div>
           {/* Ir a pagar */}
           <button

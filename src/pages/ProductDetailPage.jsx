@@ -1,6 +1,7 @@
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { useAuth } from "../auth/AuthProvider";
+import { useCart } from "../context/CartContext";
 
 // Simulación de productos con más detalles
 const destacados = [
@@ -118,6 +119,7 @@ export default function ProductDetailPage() {
 	const { slug, id } = useParams();
 	const navigate = useNavigate();
 	const { token } = useAuth();
+	const { refreshCarrito } = useCart();
 	const [product, setProduct] = useState(null);
 	const [mainImgIdx, setMainImgIdx] = useState(0);
 	const [qty, setQty] = useState(1);
@@ -263,6 +265,7 @@ export default function ProductDetailPage() {
 			});
 			if (res.ok) {
 				setAddCartMsg("Producto agregado al carrito.");
+				refreshCarrito();
 			} else {
 				setAddCartMsg("No se pudo agregar al carrito.");
 			}

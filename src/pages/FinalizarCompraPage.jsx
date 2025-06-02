@@ -79,8 +79,23 @@ export default function FinalizarCompraPage() {
    * Calcula el total final de la compra (sumando $2000 si hay envío).
    */
   const calcularTotal = () => {
-    if (!carrito) return 0;
-    return envio ? carrito.total + 2000 : carrito.total;
+    if (!carrito || !Array.isArray(carrito.items) || carrito.items.length === 0) return 0;
+    // Sumar subtotales de los items si carrito.total no es válido
+    let total = 0;
+    if (typeof carrito.total === "number" && !isNaN(carrito.total)) {
+      total = carrito.total;
+    } else {
+      total = carrito.items.reduce((sum, item) => {
+        if (item.subtotal !== undefined && item.subtotal !== null && !isNaN(Number(item.subtotal))) {
+          return sum + Number(item.subtotal);
+        }
+        if (item.precioUnitario !== undefined && item.cantidad !== undefined) {
+          return sum + (Number(item.precioUnitario) * Number(item.cantidad));
+        }
+        return sum;
+      }, 0);
+    }
+    return envio ? total + 2000 : total;
   };
 
   /**
@@ -175,7 +190,9 @@ export default function FinalizarCompraPage() {
           />
         )}
         {/* Paso 3: Comprobante */}
-        {step === 3 && orden && <StepComprobante orden={orden} envio={envio} />}
+        {step === 3 && orden && orden.items && Array.isArray(orden.items) && (
+          <StepComprobante orden={orden} envio={envio} />
+        )}
       </AnimatePresence>
     </div>
   );

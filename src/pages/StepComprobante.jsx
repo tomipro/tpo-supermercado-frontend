@@ -15,16 +15,16 @@ export default function StepComprobante({ orden, envio }) {
     y += 10;
     doc.setFontSize(11);
     doc.setTextColor(0, 0, 0);
-    doc.text(`N° Orden: ${orden.ordenId}`, 15, y);
+    doc.text(`N° Orden: ${orden.ordenId || ""}`, 15, y);
     doc.text(
-      `Fecha: ${new Date(orden.fechaCreacion).toLocaleString("es-AR")}`,
+      `Fecha: ${orden.fechaCreacion ? new Date(orden.fechaCreacion).toLocaleString("es-AR") : ""}`,
       70,
       y
     );
-    doc.text(`Estado: ${orden.estado}`, 150, y);
+    doc.text(`Estado: ${orden.estado || ""}`, 150, y);
 
     y += 7;
-    doc.text(`Dirección: ${orden.direccion}`, 15, y);
+    doc.text(`Dirección: ${orden.direccion || ""}`, 15, y);
 
     y += 10;
     doc.setFontSize(12);
@@ -38,32 +38,72 @@ export default function StepComprobante({ orden, envio }) {
     doc.text("Subtotal", 135, y);
 
     y += 6;
-    orden.items.forEach((item) => {
-      doc.text(item.nombreProducto, 15, y);
-      doc.text(String(item.cantidad), 80, y);
-      doc.text(`$${item.precioUnitario.toFixed(2)}`, 105, y);
-      doc.text(`$${item.subtotal.toFixed(2)}`, 135, y);
-      y += 6;
-    });
+    if (orden.items && Array.isArray(orden.items)) {
+      orden.items.forEach((item) => {
+        doc.text(item.nombreProducto || "", 15, y);
+        doc.text(String(item.cantidad || ""), 80, y);
+        doc.text(
+          item.precioUnitario !== undefined && item.precioUnitario !== null && !isNaN(Number(item.precioUnitario))
+            ? `$${Number(item.precioUnitario).toFixed(2)}`
+            : "-",
+          105,
+          y
+        );
+        doc.text(
+          item.subtotal !== undefined && item.subtotal !== null && !isNaN(Number(item.subtotal))
+            ? `$${Number(item.subtotal).toFixed(2)}`
+            : (item.precioUnitario !== undefined && item.cantidad !== undefined
+                ? `$${(Number(item.precioUnitario) * Number(item.cantidad)).toFixed(2)}`
+                : "-"),
+          135,
+          y
+        );
+        y += 6;
+      });
+    }
 
     y += 6;
     doc.setFontSize(11);
-    doc.text(`Subtotal: $${orden.subtotal.toLocaleString("es-AR")}`, 120, y);
-    y += 6;
     doc.text(
-      `Descuento: -$${orden.descuentoTotal.toLocaleString("es-AR")}`,
+      `Subtotal: $${typeof orden.subtotal === "number" && !isNaN(orden.subtotal)
+        ? orden.subtotal.toLocaleString("es-AR")
+        : (() => {
+            if (!orden.items || !Array.isArray(orden.items)) return "0";
+            const subtotal = orden.items.reduce((sum, item) => {
+              if (item.subtotal !== undefined && item.subtotal !== null && !isNaN(Number(item.subtotal))) {
+                return sum + Number(item.subtotal);
+              }
+              if (item.precioUnitario !== undefined && item.cantidad !== undefined) {
+                return sum + (Number(item.precioUnitario) * Number(item.cantidad));
+              }
+              return sum;
+            }, 0);
+            return subtotal.toLocaleString("es-AR");
+          })()
+      }`,
       120,
       y
     );
     y += 6;
-    if (orden.direccion !== "Retiro en local") {
+    doc.text(
+      `Descuento: -$${typeof orden.descuentoTotal === "number" && !isNaN(orden.descuentoTotal)
+        ? orden.descuentoTotal.toLocaleString("es-AR")
+        : "0"
+      }`,
+      120,
+      y
+    );
+    y += 6;
+    if (orden.direccion && orden.direccion !== "Retiro en local") {
       doc.text("Envío: +$2000", 120, y);
       y += 6;
     }
     doc.setFontSize(14);
     doc.setTextColor(24, 160, 20);
     const totalFinal =
-      orden.direccion !== "Retiro en local" ? orden.total + 2000 : orden.total;
+      orden.direccion && orden.direccion !== "Retiro en local"
+        ? (typeof orden.total === "number" && !isNaN(orden.total) ? orden.total + 2000 : 2000)
+        : (typeof orden.total === "number" && !isNaN(orden.total) ? orden.total : 0);
     doc.text(`TOTAL: $${totalFinal.toLocaleString("es-AR")}`, 120, y);
 
     y += 14;
@@ -124,7 +164,13 @@ export default function StepComprobante({ orden, envio }) {
                   <td className="py-2 px-3">
                     ${item.precioUnitario.toFixed(2)}
                   </td>
-                  <td className="py-2 px-3">${item.subtotal.toFixed(2)}</td>
+                  <td>
+                    {item.subtotal !== undefined && item.subtotal !== null && !isNaN(Number(item.subtotal))
+                      ? `$${Number(item.subtotal).toFixed(2)}`
+                      : (item.precioUnitario !== undefined && item.cantidad !== undefined
+                          ? `$${(Number(item.precioUnitario) * Number(item.cantidad)).toFixed(2)}`
+                          : "-")}
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -134,16 +180,34 @@ export default function StepComprobante({ orden, envio }) {
           <div>
             Subtotal:{" "}
             <span className="text-gray-800">
-              ${orden.subtotal.toLocaleString("es-AR")}
+              {typeof orden.subtotal === "number" && !isNaN(orden.subtotal)
+                ? `$${orden.subtotal.toLocaleString("es-AR")}`
+                : (() => {
+                    if (!orden.items || !Array.isArray(orden.items)) return "$0";
+                    const subtotal = orden.items.reduce((sum, item) => {
+                      if (item.subtotal !== undefined && item.subtotal !== null && !isNaN(Number(item.subtotal))) {
+                        return sum + Number(item.subtotal);
+                      }
+                      if (item.precioUnitario !== undefined && item.cantidad !== undefined) {
+                        return sum + (Number(item.precioUnitario) * Number(item.cantidad));
+                      }
+                      return sum;
+                    }, 0);
+                    return `$${subtotal.toLocaleString("es-AR")}`;
+                  })()
+              }
             </span>
           </div>
           <div>
             Descuento:{" "}
             <span className="text-red-700">
-              - ${orden.descuentoTotal.toLocaleString("es-AR")}
+              {typeof orden.descuentoTotal === "number" && !isNaN(orden.descuentoTotal)
+                ? `- $${orden.descuentoTotal.toLocaleString("es-AR")}`
+                : "- $0"}
             </span>
           </div>
-          {orden.direccion !== "Retiro en local" && (
+          {/* Mostrar costo de envío solo si NO es retiro en local */}
+          {orden.direccion && orden.direccion !== "Retiro en local" && (
             <div>
               Envío: <span className="text-blue-700">+ $2000</span>
             </div>
@@ -152,15 +216,27 @@ export default function StepComprobante({ orden, envio }) {
             Total a pagar:{" "}
             <span className="text-green-800">
               $
-              {(orden.direccion !== "Retiro en local"
-                ? orden.total + 2000
-                : orden.total
-              ).toLocaleString("es-AR")}
+              {typeof orden.total === "number" && !isNaN(orden.total)
+                ? orden.total.toLocaleString("es-AR")
+                : (() => {
+                    if (!orden.items || !Array.isArray(orden.items)) return "0";
+                    const total = orden.items.reduce((sum, item) => {
+                      if (item.subtotal !== undefined && item.subtotal !== null && !isNaN(Number(item.subtotal))) {
+                        return sum + Number(item.subtotal);
+                      }
+                      if (item.precioUnitario !== undefined && item.cantidad !== undefined) {
+                        return sum + (Number(item.precioUnitario) * Number(item.cantidad));
+                      }
+                      return sum;
+                    }, 0);
+                    return total.toLocaleString("es-AR");
+                  })()}
             </span>
           </div>
         </div>
         <button
           className="mt-6 px-8 py-3 bg-blue-700 text-white rounded-lg font-bold text-lg shadow-lg hover:bg-blue-800 transition"
+          type="button"
           onClick={handleDescargarPDF}
         >
           Descargar comprobante en PDF
