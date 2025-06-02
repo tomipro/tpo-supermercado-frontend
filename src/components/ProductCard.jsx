@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom'
 
 export default function ProductCard({
+  id,
   name,
   brand,
   img,
@@ -10,6 +11,7 @@ export default function ProductCard({
   bestSeller,
   onQuickView,
   showSinImpuestos = true,
+  onAddToCart, // NUEVO
 }) {
   // Esta línea genera un "slug" a partir del nombre del producto.
   // El slug es una versión del nombre en minúsculas, sin espacios ni caracteres especiales,
@@ -31,7 +33,7 @@ export default function ProductCard({
         </span>
       )}
       <Link
-        to={`/producto/${slug}`}
+        to={id ? `/producto/id/${id}` : `/producto/${slug}`}
         className="flex flex-col items-center flex-1 px-2 pt-4 pb-2"
         tabIndex={-1}
         aria-label={`Ir a la página de ${name}`}
@@ -62,7 +64,7 @@ export default function ProductCard({
           tabIndex={-1}
           onClick={e => {
             e.stopPropagation()
-            // aca iría la lógica para agregar al carrito
+            if (onAddToCart && id) onAddToCart(id, 1)
           }}
         >
           Agregar

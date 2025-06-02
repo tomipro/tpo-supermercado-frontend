@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import ProductCard from '../components/ProductCard'
+import { useAuth } from '../auth/AuthProvider'
 
 // todo esto se  va cuando integramos backend.. osea hariamos un fetch de estas cosas
 
@@ -137,7 +138,9 @@ function ProductQuickView({ product, onClose }) {
 					</div>
 					<button
 						className="bg-primary hover:bg-secondary text-white font-semibold px-6 py-3 rounded-lg shadow transition text-base w-full flex items-center justify-center gap-2"
-						onClick={() => { /* lógica agregar al carrito */ }}
+						onClick={() => {
+							handleAddToCart(product.id, qty)
+						}}
 					>
 						<span>Agregar al carrito</span>
 						<span className="font-bold">×{qty}</span>
@@ -154,6 +157,7 @@ function useQueryParam(name) {
 }
 
 export default function BuscarPage() {
+	const { token } = useAuth();
 	const searchParam = useQueryParam('search')
 	const [query, setQuery] = useState(searchParam)
 	const [marcas, setMarcas] = useState([])
@@ -261,6 +265,18 @@ export default function BuscarPage() {
 				? subcategorias.filter(s => s !== subId)
 				: [...subcategorias, subId]
 		)
+	}
+
+	async function handleAddToCart(id, cantidad) {
+		try {
+			await fetch(`http://localhost:4040/carritos/${id}?cantidad=${cantidad}`, {
+				method: "PATCH",
+				headers: {
+					"Content-Type": "application/json",
+					Authorization: `Bearer ${token}`,
+				},
+			});
+		} catch {}
 	}
 
 	return (
@@ -398,6 +414,7 @@ export default function BuscarPage() {
 							{productosFiltrados.map((p, i) => (
 								<ProductCard
 									key={p.id || i}
+									id={p.id}
 									name={p.nombre}
 									brand={p.marca}
 									img={
@@ -410,6 +427,7 @@ export default function BuscarPage() {
 									offer={p.descuento > 0 ? `${p.descuento}% OFF` : undefined}
 									bestSeller={p.bestSeller}
 									onQuickView={setQuickView}
+									onAddToCart={handleAddToCart}
 								/>
 							))}
 						</div>

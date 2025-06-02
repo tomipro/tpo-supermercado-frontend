@@ -73,15 +73,31 @@ export default function CartPage() {
       },
     })
       .then((res) => {
+        if (res.status === 403) throw new Error("No autorizado. Iniciá sesión para ver tu carrito.");
+        if (res.status === 404) throw new Error("No se encontró el carrito.");
         if (!res.ok) throw new Error("No se pudo cargar el carrito");
         return res.json();
       })
       .then((data) => {
-        setCarrito(data);
+        // Asegura que data tenga la estructura esperada y que items sea array
+        if (!data || typeof data !== "object" || !Array.isArray(data.items)) {
+          setCarrito({ items: [], total: 0 });
+        } else {
+          // Si algún item es null o no tiene productoId, filtralo
+          const items = Array.isArray(data.items)
+            ? data.items.filter(
+                (item) =>
+                  item &&
+                  typeof item === "object" &&
+                  typeof item.productoId !== "undefined"
+              )
+            : [];
+          setCarrito({ ...data, items });
+        }
         setLoading(false);
       })
-      .catch(() => {
-        setError("No se pudo cargar el carrito. Intenta de nuevo.");
+      .catch((err) => {
+        setError(err.message || "No se pudo cargar el carrito. Intenta de nuevo.");
         setLoading(false);
       });
   }, [token]);
@@ -229,17 +245,21 @@ export default function CartPage() {
                     <FaPlus size={14} />
                   </button>
                 </div>
-                {/* Precio unitario y subtotal */}
+                {/* Precio unitario and subtotal */}
                 <div className="flex flex-col items-end gap-2 min-w-[120px]">
                   <div className="text-sm text-gray-500">Precio c/u</div>
                   <div className="font-semibold text-base text-blue-700">
-                    ${item.precioUnitario.toFixed(2)}
+                    {typeof item.precioUnitario === "number"
+                      ? `$${item.precioUnitario.toFixed(2)}`
+                      : "-"}
                   </div>
                 </div>
                 <div className="flex flex-col items-end gap-2 min-w-[120px]">
                   <div className="text-sm text-gray-500">Subtotal</div>
                   <div className="font-bold text-lg text-green-700">
-                    ${item.subtotal.toFixed(2)}
+                    {typeof item.subtotal === "number"
+                      ? `$${item.subtotal.toFixed(2)}`
+                      : "-"}
                   </div>
                 </div>
                 {/* Eliminar producto */}
@@ -279,7 +299,10 @@ export default function CartPage() {
               animate={{ scale: 1, color: "#059669" }}
               transition={{ duration: 0.3 }}
             >
-              ${carrito.total.toFixed(2)}
+              {/* Evita error si carrito.total es undefined o null */}
+              {typeof carrito.total === "number"
+                ? `$${carrito.total.toFixed(2)}`
+                : "-"}
             </motion.span>
           </div>
           {/* Ir a pagar */}

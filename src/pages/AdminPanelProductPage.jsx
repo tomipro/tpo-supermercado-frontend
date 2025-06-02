@@ -78,6 +78,7 @@ export default function AdminPanelProductPage() {
         {productos.map((prod) => (
           <ProductAdminListCard
             key={prod.id}
+            id={prod.id}
             name={prod.nombre}
             brand={prod.marca}
             price={prod.precio}

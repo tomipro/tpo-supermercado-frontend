@@ -42,6 +42,7 @@ function App() {
           <Route path="/reset-password" element={<ResetPasswordPage />} />
 
           {/* Rutas protegidas */}
+          <Route path="/producto/id/:id" element={<ProductDetailPage />} />
           <Route path="/producto/:slug" element={<ProductDetailPage />} />
           <Route element={<ProtectedRoute />}>
             <Route path="/carrito" element={<CartPage />} />
