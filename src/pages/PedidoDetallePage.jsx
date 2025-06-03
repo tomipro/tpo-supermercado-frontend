@@ -15,7 +15,6 @@ export default function PedidoDetallePage() {
   useEffect(() => {
     setLoading(true);
     setError("");
-    // Llama al endpoint correcto: /ordenes/{usuarioId}/usuarios/{pedidoId}
     if (!usuario || !usuario.id) {
       setError("No se pudo obtener el usuario.");
       setLoading(false);
@@ -40,51 +39,59 @@ export default function PedidoDetallePage() {
     if (!input) return;
     window.scrollTo(0, 0);
     await new Promise((resolve) => setTimeout(resolve, 200));
-    // Clonar el nodo y limpiar estilos problemáticos para html2canvas
+
+    // Clonar el nodo
     const clone = input.cloneNode(true);
 
-    // Elimina todos los estilos de color que usen "oklch" y clases de Tailwind que puedan usar oklch
-    const cleanColors = (node) => {
+    // Función para limpiar estilos problemáticos
+    const cleanStyles = (node) => {
       if (node.nodeType === 1) {
-        // Limpia atributos style con oklch y cualquier color:* o background-color:* con oklch
-        const style = node.getAttribute("style");
-        if (style && style.includes("oklch")) {
-          node.setAttribute(
-            "style",
-            style.replace(/(color|background-color):\s*oklch\([^)]+\);?/g, "")
-          );
+        // Solo elementos HTML
+        // Limpiar estilos inline con oklch
+        if (node.hasAttribute("style")) {
+          const style = node.getAttribute("style");
+          if (style && style.includes("oklch")) {
+            node.setAttribute(
+              "style",
+              style.replace(/oklch\([^)]+\)/g, "rgb(0, 0, 0)")
+            );
+          }
         }
-        // Limpia clases de Tailwind que puedan usar oklch (ej: text-primary, text-accent, bg-accent, etc)
-        const classList = node.getAttribute("class");
-        if (classList) {
-          node.setAttribute(
-            "class",
-            classList
-              .split(" ")
-              .filter(
-                (cls) =>
-                  !cls.startsWith("text-primary") &&
-                  !cls.startsWith("text-accent") &&
-                  !cls.startsWith("bg-primary") &&
-                  !cls.startsWith("bg-accent")
-              )
-              .join(" ")
+
+        // Limpiar clases de Tailwind que puedan usar oklch
+        if (node.hasAttribute("class")) {
+          const classes = node.getAttribute("class").split(" ");
+          const filtered = classes.filter(
+            (cls) =>
+              !cls.startsWith("text-") &&
+              !cls.startsWith("bg-") &&
+              !cls.startsWith("border-") &&
+              !cls.includes("primary") &&
+              !cls.includes("accent") &&
+              !cls.includes("secondary")
           );
+          node.setAttribute("class", filtered.join(" "));
         }
-        // Limpia atributos de color problemáticos
-        if (node.hasAttribute("color") && node.getAttribute("color").includes("oklch")) {
+
+        // Limpiar atributos de color directos
+        if (node.hasAttribute("color")) {
           node.removeAttribute("color");
         }
-        Array.from(node.children).forEach(cleanColors);
+
+        // Procesar hijos recursivamente
+        Array.from(node.children).forEach(cleanStyles);
       }
     };
-    cleanColors(clone);
 
-    // También limpia todos los estilos inline de <style> que tengan oklch
+    // Limpiar el clon
+    cleanStyles(clone);
+
+    // Limpiar etiquetas <style>
     Array.from(clone.querySelectorAll("style")).forEach((styleTag) => {
-      if (styleTag.innerHTML.includes("oklch")) {
-        styleTag.innerHTML = styleTag.innerHTML.replace(/oklch\([^)]+\)/g, "#000");
-      }
+      styleTag.innerHTML = styleTag.innerHTML
+        .replace(/oklch\([^)]+\)/g, "rgb(0, 0, 0)")
+        .replace(/color:[^;]+;/g, "color: #000;")
+        .replace(/background-color:[^;]+;/g, "background-color: #fff;");
     });
 
     // Crear un contenedor temporal fuera de pantalla
@@ -97,13 +104,27 @@ export default function PedidoDetallePage() {
     tempDiv.appendChild(clone);
     document.body.appendChild(tempDiv);
 
-    html2canvas(clone, { scale: 2, useCORS: true, backgroundColor: "#fff" }).then((canvas) => {
+    // Configuración mejorada para html2canvas
+    const options = {
+      scale: 2,
+      useCORS: true,
+      backgroundColor: "#ffffff",
+      logging: false,
+      ignoreElements: (element) => {
+        // Ignorar elementos específicos si es necesario
+        return false;
+      },
+    };
+
+    try {
+      const canvas = await html2canvas(clone, options);
       const imgData = canvas.toDataURL("image/png");
       const pdf = new jsPDF({
         orientation: "p",
         unit: "pt",
         format: "a4",
       });
+
       const pageWidth = pdf.internal.pageSize.getWidth();
       const pageHeight = pdf.internal.pageSize.getHeight();
       const imgProps = pdf.getImageProperties(imgData);
@@ -141,22 +162,34 @@ export default function PedidoDetallePage() {
           }
         }
       }
+
       pdf.save(`pedido_${id}.pdf`);
+    } catch (error) {
+      console.error("Error al generar el PDF:", error);
+      alert(
+        "Ocurrió un error al generar el PDF. Por favor intenta nuevamente."
+      );
+    } finally {
       document.body.removeChild(tempDiv);
-    });
+    }
   };
 
+  // Resto del componente permanece igual
   if (loading)
     return (
       <div className="max-w-xl mx-auto mt-20 p-8 bg-white rounded shadow text-center">
-        <h2 className="text-2xl font-bold mb-4 text-primary">Cargando pedido...</h2>
+        <h2 className="text-2xl font-bold mb-4 text-primary">
+          Cargando pedido...
+        </h2>
       </div>
     );
 
   if (error || !pedido) {
     return (
       <div className="max-w-xl mx-auto mt-20 p-8 bg-white rounded shadow text-center">
-        <h2 className="text-2xl font-bold mb-4 text-red-600">Pedido no encontrado</h2>
+        <h2 className="text-2xl font-bold mb-4 text-red-600">
+          Pedido no encontrado
+        </h2>
         <button
           className="mt-4 px-4 py-2 bg-primary text-white rounded"
           onClick={() => navigate(-1)}
@@ -167,14 +200,14 @@ export default function PedidoDetallePage() {
     );
   }
 
-  // Normaliza campos para mostrar
   const productos = pedido.items || pedido.productos || [];
   const fecha = pedido.fechaCreacion
     ? new Date(pedido.fechaCreacion).toLocaleDateString("es-AR")
     : pedido.fecha;
-  const total = typeof pedido.total === "number" && !isNaN(pedido.total)
-    ? pedido.total.toLocaleString("es-AR")
-    : pedido.total;
+  const total =
+    typeof pedido.total === "number" && !isNaN(pedido.total)
+      ? pedido.total.toLocaleString("es-AR")
+      : pedido.total;
 
   return (
     <div className="max-w-2xl mx-auto mt-10 bg-white rounded-xl shadow-lg p-8">
@@ -195,7 +228,9 @@ export default function PedidoDetallePage() {
           Estado: <span className="font-semibold">{pedido.estado}</span>
         </div>
         <div className="mb-6">
-          <h2 className="text-lg font-semibold mb-2 text-dark">Productos comprados</h2>
+          <h2 className="text-lg font-semibold mb-2 text-dark">
+            Productos comprados
+          </h2>
           <table className="w-full text-sm mb-2">
             <thead>
               <tr className="text-left text-muted border-b">
@@ -211,29 +246,42 @@ export default function PedidoDetallePage() {
                   <td className="py-1">{prod.nombreProducto || prod.nombre}</td>
                   <td className="py-1">{prod.cantidad}</td>
                   <td className="py-1">
-                    ${prod.precioUnitario !== undefined
+                    $
+                    {prod.precioUnitario !== undefined
                       ? Number(prod.precioUnitario).toFixed(2)
                       : prod.precio !== undefined
                       ? Number(prod.precio).toFixed(2)
                       : "-"}
                   </td>
                   <td className="py-1">
-                    ${prod.subtotal !== undefined
+                    $
+                    {prod.subtotal !== undefined
                       ? Number(prod.subtotal).toFixed(2)
-                      : (prod.precioUnitario !== undefined && prod.cantidad !== undefined
-                        ? (Number(prod.precioUnitario) * Number(prod.cantidad)).toFixed(2)
-                        : (prod.precio !== undefined && prod.cantidad !== undefined
-                          ? (Number(prod.precio) * Number(prod.cantidad)).toFixed(2)
-                          : "-"))}
+                      : prod.precioUnitario !== undefined &&
+                        prod.cantidad !== undefined
+                      ? (
+                          Number(prod.precioUnitario) * Number(prod.cantidad)
+                        ).toFixed(2)
+                      : prod.precio !== undefined && prod.cantidad !== undefined
+                      ? (Number(prod.precio) * Number(prod.cantidad)).toFixed(2)
+                      : "-"}
                     <div className="text-xs text-gray-400">
                       Precio sin impuestos nacionales: $
                       {prod.subtotal !== undefined
                         ? Math.round(Number(prod.subtotal) / 1.21)
-                        : (prod.precioUnitario !== undefined && prod.cantidad !== undefined
-                          ? Math.round((Number(prod.precioUnitario) * Number(prod.cantidad)) / 1.21)
-                          : (prod.precio !== undefined && prod.cantidad !== undefined
-                            ? Math.round((Number(prod.precio) * Number(prod.cantidad)) / 1.21)
-                            : "-"))}
+                        : prod.precioUnitario !== undefined &&
+                          prod.cantidad !== undefined
+                        ? Math.round(
+                            (Number(prod.precioUnitario) *
+                              Number(prod.cantidad)) /
+                              1.21
+                          )
+                        : prod.precio !== undefined &&
+                          prod.cantidad !== undefined
+                        ? Math.round(
+                            (Number(prod.precio) * Number(prod.cantidad)) / 1.21
+                          )
+                        : "-"}
                     </div>
                   </td>
                 </tr>
@@ -245,18 +293,20 @@ export default function PedidoDetallePage() {
           </div>
           <div className="text-right text-xs text-gray-400 mb-2">
             Precio sin impuestos nacionales: $
-            {pedido.total
-              ? Math.round(Number(pedido.total) / 1.21)
-              : "-"}
+            {pedido.total ? Math.round(Number(pedido.total) / 1.21) : "-"}
           </div>
         </div>
         <div className="mb-4">
-          <h2 className="text-lg font-semibold mb-2 text-dark">Forma de entrega y pago</h2>
+          <h2 className="text-lg font-semibold mb-2 text-dark">
+            Forma de entrega y pago
+          </h2>
           <div className="text-sm text-muted mb-1">
-            Método de pago: <span className="font-semibold">{pedido.metodoPago}</span>
+            Método de pago:{" "}
+            <span className="font-semibold">{pedido.metodoPago}</span>
           </div>
           <div className="text-sm text-muted mb-1">
-            Tipo de entrega: <span className="font-semibold">
+            Tipo de entrega:{" "}
+            <span className="font-semibold">
               {pedido.direccion && pedido.direccion !== "Retiro en local"
                 ? "Envío a domicilio"
                 : "Retiro en tienda"}
@@ -264,18 +314,23 @@ export default function PedidoDetallePage() {
           </div>
           {pedido.direccion && pedido.direccion !== "Retiro en local" && (
             <div className="text-sm text-muted mb-1">
-              Dirección de entrega: <span className="font-semibold">{pedido.direccion}</span>
+              Dirección de entrega:{" "}
+              <span className="font-semibold">{pedido.direccion}</span>
             </div>
           )}
           {pedido.direccion === "Retiro en local" && (
             <div className="text-sm text-muted mb-1">
-              Sucursal: <span className="font-semibold">Sucursal principal</span>
+              Sucursal:{" "}
+              <span className="font-semibold">Sucursal principal</span>
             </div>
           )}
         </div>
       </div>
       <div className="flex justify-between mt-6">
-        <Link to="/mis-pedidos" className="text-primary hover:underline text-sm">
+        <Link
+          to="/mis-pedidos"
+          className="text-primary hover:underline text-sm"
+        >
           ← Volver a mis pedidos
         </Link>
         <button
