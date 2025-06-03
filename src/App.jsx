@@ -54,7 +54,10 @@ function App() {
                 path="/cambiar-contrasena"
                 element={<ResetPasswordPageLog />}
               />
-              <Route path="/finalizar-compra" element={<FinalizarCompraPage />} />
+              <Route
+                path="/finalizar-compra"
+                element={<FinalizarCompraPage />}
+              />
               <Route path="/step-comprobante" element={<StepComprobante />} />
               <Route path="/step-entrega" element={<StepEntrega />} />
               <Route path="/step-pago" element={<StepPago />} />
@@ -81,7 +84,10 @@ function App() {
               {/* Rutas de admin con layout */}
               <Route path="/admin" element={<AdminPage />}>
                 <Route path="productos" element={<AdminPanelProductPage />} />
-                <Route path="categorias" element={<AdminPanelCategoriesPage />} />
+                <Route
+                  path="categorias"
+                  element={<AdminPanelCategoriesPage />}
+                />
               </Route>
               <Route path="/mis-pedidos" element={<MisPedidosPage />} />
               <Route path="/mis-pedidos/:id" element={<PedidoDetallePage />} />
@@ -89,10 +95,7 @@ function App() {
                 path="/cambiar-contrasena"
                 element={<ResetPasswordPageLog />}
               />
-              <Route
-                path="/mis-direcciones"
-                element={<MisDireccionesPage />}
-              />
+              <Route path="/mis-direcciones" element={<MisDireccionesPage />} />
             </Route>
 
             {/* Ruta catch-all */}

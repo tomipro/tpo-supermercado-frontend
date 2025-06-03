@@ -2,88 +2,7 @@ import { Link, NavLink, useNavigate } from "react-router-dom";
 import { useState, useEffect, useRef } from "react";
 import { useAuth } from "../auth/AuthProvider";
 import { useCart } from "../context/CartContext";
-
-// Componente mejorado para mostrar la cotización del dólar
-function DolarCotizacion() {
-  const [cotizaciones, setCotizaciones] = useState({
-    oficial: { compra: 0, venta: 0, variacion: 0 },
-    blue: { compra: 0, venta: 0, variacion: 0 },
-    lastUpdated: new Date().toLocaleTimeString(),
-  });
-
-  useEffect(() => {
-    // Simulación de datos de API
-    const fetchCotizaciones = () => {
-      // Datos simulados
-      const mockData = {
-        oficial: {
-          compra: 350.5,
-          venta: 370.25,
-          variacion: 1.2, // Porcentaje
-        },
-        blue: {
-          compra: 480.75,
-          venta: 500.3,
-          variacion: -0.8, // Porcentaje
-        },
-        lastUpdated: new Date().toLocaleTimeString("es-AR", {
-          hour: "2-digit",
-          minute: "2-digit",
-        }),
-      };
-      setCotizaciones(mockData);
-    };
-
-    fetchCotizaciones();
-    // Actualizar cada minuto (60000 ms)
-    const interval = setInterval(fetchCotizaciones, 60000);
-    return () => clearInterval(interval);
-  }, []);
-
-  const formatVariacion = (value) => {
-    const isPositive = value >= 0;
-    return (
-      <span
-        className={`flex items-center ${
-          isPositive ? "text-green-600" : "text-red-600"
-        }`}
-      >
-        {isPositive ? "↑" : "↓"} {Math.abs(value)}%
-      </span>
-    );
-  };
-
-  return (
-    <div className="flex items-center justify-center gap-4 text-xs sm:text-sm">
-      <div className="flex items-center gap-1">
-        <span className="font-semibold">Dólar Oficial:</span>
-        <span className="text-gray-700">
-          ${cotizaciones.oficial.compra.toFixed(2)}
-        </span>
-        <span>/</span>
-        <span className="text-gray-700">
-          ${cotizaciones.oficial.venta.toFixed(2)}
-        </span>
-        {formatVariacion(cotizaciones.oficial.variacion)}
-      </div>
-      <div className="h-4 w-px bg-gray-300"></div>
-      <div className="flex items-center gap-1">
-        <span className="font-semibold">Dólar Blue:</span>
-        <span className="text-gray-700">
-          ${cotizaciones.blue.compra.toFixed(2)}
-        </span>
-        <span>/</span>
-        <span className="text-gray-700">
-          ${cotizaciones.blue.venta.toFixed(2)}
-        </span>
-        {formatVariacion(cotizaciones.blue.variacion)}
-      </div>
-      <div className="hidden sm:block text-gray-500 text-xs">
-        Actualizado: {cotizaciones.lastUpdated}
-      </div>
-    </div>
-  );
-}
+import DolarCotizacion from "../components/DolarCotizacion";
 
 const categoriesDropdown = [
   { name: "Ver todos", to: "/categorias" },
@@ -154,11 +73,17 @@ export default function Navbar() {
 
   return (
     <>
-      <div className="w-full bg-green-50 py-2 px-4 border-b border-green-200">
-        <div className="max-w-[1600px] mx-auto">
-          <DolarCotizacion />
+      {/* Barra superior con el dólar */}
+      <div className="w-full bg-green-50 py-1 px-4 border-b border-green-200">
+        <div className="max-w-[1600px] mx-auto flex justify-between items-center">
+          <DolarCotizacion compact />
+          <div className="text-xs text-gray-500">
+            Actualizado: {new Date().toLocaleTimeString("es-AR")}
+          </div>
         </div>
       </div>
+
+      {/* Navbar principal */}
       <header className="sticky top-0 z-40 w-full bg-white/80 backdrop-blur-xl shadow-lg border-b border-gray-100">
         <nav className="max-w-[1600px] mx-auto flex items-center justify-between px-4 sm:px-8 h-[76px] gap-2">
           {/* Logo */}
