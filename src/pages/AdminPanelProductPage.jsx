@@ -84,7 +84,11 @@ export default function AdminPanelProductPage() {
             price={prod.precio}
             imagenes={
               prod.imagenes && prod.imagenes.length > 0
-                ? prod.imagenes.map((img) => img?.url || FALLBACK_IMG)
+                ? prod.imagenes.map((img) =>
+                    typeof img === "string" && img.startsWith("http")
+                      ? img
+                      : FALLBACK_IMG
+                  )
                 : [FALLBACK_IMG]
             }
             descuento={prod.descuento}
