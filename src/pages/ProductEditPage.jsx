@@ -332,7 +332,7 @@ export default function ProductEditPage({ modo = "editar" }) {
               producto.imagenes.map((img, idx) => (
                 <div key={idx} className="flex flex-col items-center mb-4">
                   <img
-                    src={img.url}
+                    src={typeof img === "string" ? img : img?.url || img?.imagen || ""}
                     alt={`Imagen ${idx + 1}`}
                     className="w-40 h-40 object-cover rounded border mb-2"
                   />

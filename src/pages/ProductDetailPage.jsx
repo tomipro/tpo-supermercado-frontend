@@ -210,7 +210,14 @@ export default function ProductDetailPage() {
 
 	// Unifica imágenes
 	const images =
-		(Array.isArray(product.imagenes) && product.imagenes.map(img => img.imagen || img.url || img))
+		(Array.isArray(product.imagenes)
+			? product.imagenes.map(img =>
+				// Si img es string, úsalo. Si es objeto, busca .imagen o .url
+				typeof img === "string"
+					? img
+					: img?.imagen || img?.url || ""
+			)
+			: [])
 		|| (Array.isArray(product.img) && product.img)
 		|| [];
 
