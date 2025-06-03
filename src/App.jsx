@@ -24,6 +24,7 @@ import FinalizarCompraPage from "./pages/FinalizarCompraPage";
 import StepComprobante from "./pages/StepComprobante";
 import StepEntrega from "./pages/StepEntrega";
 import StepPago from "./pages/StepPago";
+import MisDireccionesPage from "./pages/MisDireccionesPage";
 
 import "./App.css";
 
@@ -87,6 +88,10 @@ function App() {
               <Route
                 path="/cambiar-contrasena"
                 element={<ResetPasswordPageLog />}
+              />
+              <Route
+                path="/mis-direcciones"
+                element={<MisDireccionesPage />}
               />
             </Route>
 

@@ -16,6 +16,12 @@ export default function HomePage() {
 	const [loadingPromos, setLoadingPromos] = useState(true);
 	const [loadingDestacados, setLoadingDestacados] = useState(true);
 	const [addCartLoading, setAddCartLoading] = useState(false);
+	const [showAllCategories, setShowAllCategories] = useState(false);
+	const [catPage, setCatPage] = useState(0);
+	const categoriesPerPage = 8;
+
+	const [prodPage, setProdPage] = useState(0);
+	const productsPerPage = 6;
 
 	// Fetch banners (puede ser endpoint propio, aquí ejemplo hardcodeado)
 	useEffect(() => {
@@ -124,12 +130,63 @@ export default function HomePage() {
 
 	function ProductCardWithFallback(props) {
 		const [imgSrc, setImgSrc] = useState(props.img || FALLBACK_IMG)
+		const [units, setUnits] = useState(0)
+		const [added, setAdded] = useState(false)
+		const [loading, setLoading] = useState(false)
+		const [productData, setProductData] = useState(null);
+
+		// Fetch full product data for quick view
+		useEffect(() => {
+			if (!props.id) return;
+			fetch(`http://localhost:4040/producto/id/${props.id}`)
+				.then(res => res.ok ? res.json() : null)
+				.then(data => setProductData(data))
+				.catch(() => setProductData(null));
+		}, [props.id]);
+
+		const handleAddToCart = async (id, cantidad) => {
+			setLoading(true)
+			await handleAddCart(id, cantidad)
+			setUnits(units + cantidad)
+			setAdded(true)
+			setLoading(false)
+			setTimeout(() => setAdded(false), 1200)
+		}
+
+		const handleAddCart = async (id, cantidad) => {
+			try {
+				await fetch(`http://localhost:4040/carritos/${id}?cantidad=${cantidad}`, {
+					method: "PATCH",
+					headers: {
+						"Content-Type": "application/json",
+						Authorization: `Bearer ${token}`,
+					},
+				});
+			} catch {}
+		}
+
+		// QuickView handler: pasa el producto completo si lo tiene, si no, pasa los props mínimos
+		const handleQuickView = (prod) => {
+			if (productData) {
+				setQuickView(productData);
+			} else {
+				setQuickView({
+					id: props.id,
+					nombre: props.name,
+					marca: props.brand,
+					precio: props.price,
+					imagenes: [{ imagen: imgSrc }],
+					...props,
+				});
+			}
+		};
+
 		return (
 			<ProductCard
 				{...props}
 				img={imgSrc}
 				onErrorImg={FALLBACK_IMG}
-				onQuickView={props.onQuickView}
+				onQuickView={handleQuickView}
 				showSinImpuestos={true}
 				onAddToCart={handleAddToCart}
 			/>
@@ -212,6 +269,11 @@ export default function HomePage() {
 			<Link
 				to={to}
 				className="flex flex-col items-center bg-white rounded-xl shadow hover:shadow-xl transition group p-3 sm:p-4 border border-gray-100 hover:border-primary"
+				style={{
+					margin: "0 12px 24px 12px", // Espaciado horizontal y vertical entre cards
+					minWidth: 140,
+					maxWidth: 180,
+				}}
 			>
 				<img
 					src={imgSrc}
@@ -408,17 +470,44 @@ export default function HomePage() {
 					Categorías populares
 				</h2>
 				{loadingCategories ? (
-					<div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-8 gap-4">
+					<div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-8 gap-x-6 gap-y-8">
 						{Array.from({ length: 8 }).map((_, i) => (
 							<SkeletonCategoryCard key={i} />
 						))}
 					</div>
+				) : categories.length === 0 ? (
+					<div className="text-gray-500">No hay categorías disponibles.</div>
 				) : (
-					<div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-8 gap-4">
-						{categories.map(cat => (
-							<CategoryCard key={cat.name} {...cat} />
-						))}
-					</div>
+					<>
+						<div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-8 gap-x-6 gap-y-8">
+							{categories
+								.slice(catPage * categoriesPerPage, (catPage + 1) * categoriesPerPage)
+								.map(cat => (
+									<CategoryCard key={cat.name} {...cat} />
+								))}
+						</div>
+						{categories.length > categoriesPerPage && (
+							<div className="flex justify-center mt-4 gap-2">
+								<button
+									className="px-3 py-1 rounded bg-accent text-primary font-semibold disabled:opacity-50"
+									onClick={() => setCatPage((p) => Math.max(0, p - 1))}
+									disabled={catPage === 0}
+								>
+									←
+								</button>
+								<span className="text-sm text-gray-600">
+									{catPage + 1} / {Math.ceil(categories.length / categoriesPerPage)}
+								</span>
+								<button
+									className="px-3 py-1 rounded bg-accent text-primary font-semibold disabled:opacity-50"
+									onClick={() => setCatPage((p) => Math.min(Math.ceil(categories.length / categoriesPerPage) - 1, p + 1))}
+									disabled={catPage >= Math.ceil(categories.length / categoriesPerPage) - 1}
+								>
+									→
+								</button>
+							</div>
+						)}
+					</>
 				)}
 			</div>
 			{/* Promociones destacadas */}
@@ -445,71 +534,111 @@ export default function HomePage() {
 				<h2 className="text-2xl sm:text-3xl font-semibold mb-6 text-dark">
 					Productos destacados
 				</h2>
-				<div className="relative">
+				<div className="relative flex flex-col items-center w-full">
 					{/* Mobile: slider horizontal con scroll snap */}
 					{loadingDestacados ? (
-						<div className="flex gap-4 overflow-x-auto pb-2 sm:hidden">
-							{Array.from({ length: 4 }).map((_, i) => (
-								<SkeletonProductCard key={i} />
-							))}
+						<div className="w-full flex justify-center">
+							<div className="flex gap-8 overflow-x-auto pb-2 px-2 max-w-[1200px] w-full">
+								{Array.from({ length: 4 }).map((_, i) => (
+									<SkeletonProductCard key={i} />
+								))}
+							</div>
 						</div>
 					) : (
-						<div className="flex gap-4 overflow-x-auto pb-2 sm:hidden"
-							style={{ scrollSnapType: 'x mandatory', WebkitOverflowScrolling: 'touch' }}>
-							{destacados.map(prod => (
-								<div
-									key={prod.id || prod.nombre}
-									className="min-w-[220px] max-w-[240px] flex-shrink-0 flex h-full"
-									style={{ scrollSnapAlign: 'center' }}
-								>
-									<ProductCardWithFallback
-										id={prod.id}
-										name={prod.nombre}
-										brand={prod.marca}
-										img={
-											(Array.isArray(prod.imagenes) && prod.imagenes[0]?.imagen)
-											|| (Array.isArray(prod.imagenes) && typeof prod.imagenes[0] === "string" && prod.imagenes[0])
-											|| undefined
-										}
-										price={prod.precio}
-										weight={prod.unidad_medida}
-										offer={prod.descuento > 0 ? `${prod.descuento}% OFF` : undefined}
-										bestSeller={prod.bestSeller}
-										onQuickView={setQuickView}
-									/>
-								</div>
-							))}
+						<div className="w-full flex justify-center">
+							<div
+								className="flex gap-8 overflow-x-auto pb-2 px-2 max-w-[1200px] w-full sm:hidden"
+								style={{
+									scrollSnapType: 'x mandatory',
+									WebkitOverflowScrolling: 'touch',
+								}}
+							>
+								{destacados
+									.slice(prodPage * productsPerPage, (prodPage + 1) * productsPerPage)
+									.map(prod => (
+										<div
+											key={prod.id || prod.nombre}
+											className="min-w-[220px] max-w-[270px] flex-shrink-0 flex h-full justify-center"
+											style={{ scrollSnapAlign: 'center' }}
+										>
+											<ProductCardWithFallback
+												id={prod.id}
+												name={prod.nombre}
+												brand={prod.marca}
+												img={
+													(Array.isArray(prod.imagenes) && prod.imagenes[0]?.imagen)
+													|| (Array.isArray(prod.imagenes) && typeof prod.imagenes[0] === "string" && prod.imagenes[0])
+													|| undefined
+												}
+												price={prod.precio}
+												weight={prod.unidad_medida}
+												offer={prod.descuento > 0 ? `${prod.descuento}% OFF` : undefined}
+												bestSeller={prod.bestSeller}
+												onQuickView={setQuickView}
+											/>
+										</div>
+									))}
+							</div>
 						</div>
 					)}
 					{/* Desktop: masonry-like grid */}
 					{loadingDestacados ? (
-						<div className="hidden sm:grid grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-x-8 gap-y-10 auto-rows-[1fr]">
-							{Array.from({ length: 6 }).map((_, i) => (
-								<SkeletonProductCard key={i} />
-							))}
+						<div className="hidden sm:flex justify-center w-full">
+							<div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-x-12 gap-y-14 auto-rows-[1fr] px-2 max-w-[2000px] w-full justify-items-center">
+								{Array.from({ length: 6 }).map((_, i) => (
+									<SkeletonProductCard key={i} />
+								))}
+							</div>
 						</div>
 					) : (
-						<div className="hidden sm:grid grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-x-8 gap-y-10 auto-rows-[1fr]">
-							{destacados.map(prod => (
-								<div key={prod.id || prod.nombre} className="flex h-full min-h-0">
-									<ProductCardWithFallback
-										id={prod.id}
-										name={prod.nombre}
-										brand={prod.marca}
-										img={
-											(Array.isArray(prod.imagenes) && prod.imagenes[0]?.imagen)
-											|| (Array.isArray(prod.imagenes) && typeof prod.imagenes[0] === "string" && prod.imagenes[0])
-											|| undefined
-										}
-										price={prod.precio}
-										weight={prod.unidad_medida}
-										offer={prod.descuento > 0 ? `${prod.descuento}% OFF` : undefined}
-										bestSeller={prod.bestSeller}
-										onQuickView={setQuickView}
-									/>
+						<>
+							<div className="hidden sm:flex justify-center w-full">
+								<div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-x-12 gap-y-14 auto-rows-[1fr] px-2 max-w-[2000px] w-full justify-items-center">
+									{destacados
+										.slice(prodPage * productsPerPage, (prodPage + 1) * productsPerPage)
+										.map(prod => (
+											<div key={prod.id || prod.nombre} className="flex h-full min-h-0 justify-center">
+												<ProductCardWithFallback
+													id={prod.id}
+													name={prod.nombre}
+													brand={prod.marca}
+													img={
+														(Array.isArray(prod.imagenes) && prod.imagenes[0]?.imagen)
+														|| (Array.isArray(prod.imagenes) && typeof prod.imagenes[0] === "string" && prod.imagenes[0])
+														|| undefined
+													}
+													price={prod.precio}
+													weight={prod.unidad_medida}
+													offer={prod.descuento > 0 ? `${prod.descuento}% OFF` : undefined}
+													bestSeller={prod.bestSeller}
+													onQuickView={setQuickView}
+												/>
+											</div>
+										))}
 								</div>
-							))}
-						</div>
+							</div>
+							{destacados.length > productsPerPage && (
+								<div className="flex justify-center mt-4 gap-2">
+									<button
+										className="px-3 py-1 rounded bg-accent text-primary font-semibold disabled:opacity-50"
+										onClick={() => setProdPage((p) => Math.max(0, p - 1))}
+										disabled={prodPage === 0}
+									>
+										←
+									</button>
+									<span className="text-sm text-gray-600">
+										{prodPage + 1} / {Math.ceil(destacados.length / productsPerPage)}
+									</span>
+									<button
+										className="px-3 py-1 rounded bg-accent text-primary font-semibold disabled:opacity-50"
+										onClick={() => setProdPage((p) => Math.min(Math.ceil(destacados.length / productsPerPage) - 1, p + 1))}
+										disabled={prodPage >= Math.ceil(destacados.length / productsPerPage) - 1}
+									>
+										→
+									</button>
+								</div>
+							)}
+						</>
 					)}
 				</div>
 			</div>

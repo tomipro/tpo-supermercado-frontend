@@ -82,11 +82,6 @@ export default function MisPedidosPage() {
                 </div>
               </div>
               <div className="mt-4 sm:mt-0 flex flex-col items-end gap-2">
-                <span className="text-xs text-gray-400">
-                  {pedido.direccion && pedido.direccion !== "Retiro en local"
-                    ? `A domicilio`
-                    : `Retiro en tienda`}
-                </span>
                 <button className="bg-primary hover:bg-secondary text-white px-4 py-2 rounded font-semibold text-sm shadow transition">
                   Ver detalles
                 </button>
