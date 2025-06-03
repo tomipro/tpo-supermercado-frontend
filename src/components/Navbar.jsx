@@ -2,20 +2,6 @@ import { Link, NavLink, useNavigate } from "react-router-dom";
 import { useState, useEffect, useRef } from "react";
 import { useAuth } from "../auth/AuthProvider";
 import { useCart } from "../context/CartContext";
-// todas estas cosas vuelan cuando integro con el back
-// osea provisorio por ahora
-
-const categoriesDropdown = [
-  { name: "Ver todos", to: "/categorias" },
-  { name: "Verdulería", to: "/categorias?cat=verduleria" },
-  { name: "Carnes", to: "/categorias?cat=carnes" },
-  { name: "Lácteos", to: "/categorias?cat=lacteos" },
-  { name: "Panadería", to: "/categorias?cat=panaderia" },
-  { name: "Snacks", to: "/categorias?cat=snacks" },
-  { name: "Bebidas", to: "/categorias?cat=bebidas" },
-  { name: "Limpieza", to: "/categorias?cat=limpieza" },
-  { name: "Cuidado personal", to: "/categorias?cat=cuidado-personal" },
-];
 
 const promosDropdown = [
   { name: "Ver todos", to: "/promociones" },
@@ -27,12 +13,6 @@ const promosDropdown = [
   { name: "Envío gratis", to: "/promociones?promo=envio-gratis" },
 ];
 
-const navLinks = [
-  { label: "Categorías", dropdown: categoriesDropdown },
-  { label: "Promociones", dropdown: promosDropdown },
-  // { to: '/admin', label: 'Admin' }, // Solo para admin, oculto por ahora
-];
-
 export default function Navbar() {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
@@ -40,6 +20,9 @@ export default function Navbar() {
   const [dropdown, setDropdown] = useState(null);
   const [mobileDropdown, setMobileDropdown] = useState(null);
   const [userDropdown, setUserDropdown] = useState(false);
+  const [categoriesDropdown, setCategoriesDropdown] = useState([
+    { name: "Ver todos", to: "/categorias" },
+  ]);
   const userDropdownRef = useRef(null);
   const { usuario, isAuthenticated, logout } = useAuth();
   const { carrito, loading } = useCart();
@@ -75,9 +58,38 @@ export default function Navbar() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [userDropdown]);
 
+  // Fetch categorías reales del backend para el dropdown
+  useEffect(() => {
+    fetch("http://localhost:4040/categorias")
+      .then((res) => res.json())
+      .then((data) => {
+        const cats = Array.isArray(data.content) ? data.content : [];
+        setCategoriesDropdown(
+          [{ name: "Ver todos", to: "/categorias" }].concat(
+            cats.map((cat) => ({
+              name: cat.nombre,
+              to: `/categorias?cat=${cat.id}`,
+            }))
+          )
+        );
+      })
+      .catch(() => {
+        setCategoriesDropdown([{ name: "Ver todos", to: "/categorias" }]);
+      });
+  }, []);
+
+  // Solo reemplaza el dropdown de categorías en navLinks
+  const navLinks = [
+    { label: "Categorías", dropdown: categoriesDropdown },
+    // { to: '/admin', label: 'Admin' }, // Solo para admin, oculto por ahora
+  ];
+
   return (
     <header className="sticky top-0 z-40 w-full bg-white/80 backdrop-blur-xl shadow-lg border-b border-gray-100">
-      <nav className="max-w-[1600px] mx-auto flex items-center justify-between px-4 sm:px-8 h-[76px] gap-2">
+      <nav
+        className="max-w-[1600px] mx-auto flex items-center justify-between px-6 sm:px-14 h-[76px] gap-2"
+        style={{ width: "100%" }}
+      >
         {/* Logo */}
         <Link
           to="/"
@@ -151,15 +163,30 @@ export default function Navbar() {
                   />
                 </svg>
               </button>
-              {/* Dropdown */}
-              {dropdown === link.label && (
-                <div className="absolute left-0 top-full mt-2 w-56 bg-white rounded-xl shadow-lg border border-gray-100 py-2 z-50 animate-fade-in">
+              {/* Dropdown: rectangular, horizontal wrap, para categorías */}
+              {dropdown === "Categorías" && link.dropdown.length > 0 && (
+                <div
+                  className="absolute left-0 top-full mt-2 bg-white rounded-xl shadow-lg border border-gray-100 z-50 animate-fade-in"
+                  style={{
+                    minWidth: 400,
+                    maxWidth: 700,
+                    maxHeight: 420,
+                    overflowY: "auto",
+                    padding: "1rem 0.7rem",
+                    display: "grid",
+                    gridTemplateColumns: "repeat(auto-fit, minmax(170px, 1fr))",
+                    gap: "0.2rem 0.3rem",
+                  }}
+                >
                   {link.dropdown.map((item) => (
                     <Link
                       key={item.name}
                       to={item.to}
-                      className="block px-4 py-2 text-dark hover:bg-accent/40 hover:text-primary rounded transition"
+                      className="px-2 py-2 text-dark hover:bg-accent/40 hover:text-primary rounded transition text-base font-medium"
                       tabIndex={0}
+                      style={{
+                        whiteSpace: "nowrap",
+                      }}
                       onClick={() => setDropdown(null)}
                     >
                       {item.name}
@@ -169,6 +196,18 @@ export default function Navbar() {
               )}
             </div>
           ))}
+          {/* <NavLink
+            to="/promociones"
+            className="px-5 py-2 rounded-full font-semibold transition-all duration-200 text-base text-dark hover:bg-accent/70 hover:text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+          >
+            Promociones
+          </NavLink> */}
+          {/* <NavLink
+            to="/buscar?promo=true"
+            className="px-5 py-2 rounded-full font-semibold transition-all duration-200 text-base text-dark hover:bg-accent/70 hover:text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+          >
+            Promociones
+          </NavLink> */}
           <NavLink
             to="/buscar"
             className="px-5 py-2 rounded-full font-semibold transition-all duration-200 text-base text-dark hover:bg-accent/70 hover:text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
@@ -256,20 +295,6 @@ export default function Navbar() {
                           key={item.productoId}
                           className="py-2 flex items-center gap-2"
                         >
-                          {/* Quitar la imagen del producto */}
-                          {/* <img
-                            src={
-                              (item.imagenes && Array.isArray(item.imagenes) && (
-                                item.imagenes[0]?.imagen ||
-                                (typeof item.imagenes[0] === "string" && item.imagenes[0])
-                              )) ||
-                              (item.productoId && typeof imagenesProductos === "object" && imagenesProductos[item.productoId]) ||
-                              ""
-                            }
-                            alt={item.nombreProducto}
-                            className="w-10 h-10 object-cover rounded border"
-                            onError={e => { e.target.src = ""; }}
-                          /> */}
                           <div className="flex-1">
                             <div className="font-semibold text-sm">
                               {item.nombreProducto}

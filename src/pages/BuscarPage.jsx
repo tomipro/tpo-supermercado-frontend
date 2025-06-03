@@ -237,22 +237,25 @@ export default function BuscarPage() {
 				if (marcas.length > 0) params.push(`marca=${marcas.join(",")}`);
 				if (categorias.length > 0) params.push(`categoriaId=${categorias.join(",")}`);
 				if (subcategorias.length > 0) params.push(`subcategoriaId=${subcategorias.join(",")}`);
-				if (promo) params.push(`oferta=true`);
 				if (precioMin) params.push(`precioMin=${precioMin}`);
 				if (precioMax) params.push(`precioMax=${precioMax}`);
 				params.push(`page=${page}`);
 				params.push(`size=${pageSize}`);
 				if (params.length > 0) url += "?" + params.join("&");
 
-				// Ejemplo de URL generada:
-				// http://localhost:4040/producto?categoriaId=1&page=0&size=12
-
 				const res = await fetch(url);
 				if (!res.ok) throw new Error("Error al cargar productos");
 				const data = await res.json();
-				setProductos(Array.isArray(data.content) ? data.content : []);
-				setTotalPages(data.totalPages || Math.ceil((data.totalElements || data.content?.length || 0) / pageSize));
-				setTotalElements(data.totalElements || 0);
+				let productosData = Array.isArray(data.content) ? data.content : [];
+
+				// Filtrar por descuento > 0 si promo está activo
+				if (promo) {
+					productosData = productosData.filter(p => Number(p.descuento) > 0);
+				}
+
+				setProductos(productosData);
+				setTotalPages(data.totalPages || Math.ceil((data.totalElements || productosData.length || 0) / pageSize));
+				setTotalElements(data.totalElements || productosData.length || 0);
 			} catch (err) {
 				setError("No se pudieron cargar los productos.");
 				setProductos([]);
