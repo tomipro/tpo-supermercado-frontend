@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "../auth/AuthProvider";
 import { useNavigate } from "react-router-dom";
+import formatearFecha from "./formatearFecha.jsx";
 
 export default function ProfilePage() {
   const { usuario, token, logout, login } = useAuth();
@@ -140,6 +141,14 @@ export default function ProfilePage() {
                 Apellido:
               </span>
               <span className="block text-lg">{perfil.apellido}</span>
+            </div>
+            <div className="mb-4">
+              <span className="block text-gray-600 font-semibold">
+                Fecha de registro:
+              </span>
+              <span className="block text-lg">
+                {formatearFecha(perfil.fecha_registro)}
+              </span>
             </div>
             <button
               className="bg-blue-600 text-white py-2 px-6 rounded font-semibold mt-2 hover:bg-blue-700 transition"

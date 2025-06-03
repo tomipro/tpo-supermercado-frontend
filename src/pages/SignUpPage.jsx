@@ -74,26 +74,26 @@ export default function SignUpPage() {
       className="max-w-md mx-auto mt-20 p-6 bg-white shadow rounded relative"
     >
       {/* Link a login arriba */}
-      <Link
-        to="/signin"
-        className="absolute left-4 top-4 flex items-center gap-1 text-primary hover:text-secondary text-sm font-semibold"
-        tabIndex={0}
+      <button
+        onClick={() => navigate("/signin")}
+        className="absolute left-4 top-4 p-2 rounded-full text-blue-500 hover:bg-blue-100 transition"
+        title="Volver"
+        type="button"
       >
         <svg
-          className="w-4 h-4 rotate-180"
+          className="w-6 h-6"
           fill="none"
           stroke="currentColor"
-          strokeWidth={2}
+          strokeWidth={2.2}
           viewBox="0 0 24 24"
         >
           <path
             strokeLinecap="round"
             strokeLinejoin="round"
-            d="M7 16l-4-4m0 0l4-4m-4 4h18"
+            d="M15 19l-7-7 7-7"
           />
         </svg>
-        Iniciar sesión
-      </Link>
+      </button>
       <h2 className="text-xl font-bold mb-4 text-center">Crear cuenta</h2>
 
       {errorMsg && (
