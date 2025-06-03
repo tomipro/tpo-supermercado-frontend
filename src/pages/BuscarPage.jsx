@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import ProductCard from '../components/ProductCard'
 import { useAuth } from '../auth/AuthProvider'
+import { useCart } from '../context/CartContext'
 
 // todo esto se  va cuando integramos backend.. osea hariamos un fetch de estas cosas
 
@@ -39,11 +40,16 @@ function SkeletonCard() {
 	)
 }
 
-function ProductQuickView({ product, onClose }) {
+function ProductQuickView({ product, onClose, onAddToCart }) {
 	const [qty, setQty] = useState(1)
+	const [added, setAdded] = useState(false)
+	const [loading, setLoading] = useState(false)
+	const [units, setUnits] = useState(0)
 
 	useEffect(() => {
 		setQty(1)
+		setAdded(false)
+		setUnits(0)
 	}, [product])
 
 	useEffect(() => {
@@ -69,6 +75,16 @@ function ProductQuickView({ product, onClose }) {
 	function handleBgClick(e) {
 		if (e.target === e.currentTarget) onClose()
 	}
+
+	const handleAdd = async () => {
+		if (!onAddToCart || !product.id) return;
+		setLoading(true);
+		await onAddToCart(product.id, qty);
+		setAdded(true);
+		setUnits(units + qty);
+		setLoading(false);
+		setTimeout(() => setAdded(false), 1200);
+	};
 
 	return (
 		<div
@@ -137,13 +153,31 @@ function ProductQuickView({ product, onClose }) {
 						/>
 					</div>
 					<button
-						className="bg-primary hover:bg-secondary text-white font-semibold px-6 py-3 rounded-lg shadow transition text-base w-full flex items-center justify-center gap-2"
-						onClick={() => {
-							handleAddToCart(product.id, qty)
-						}}
+						className={`bg-primary text-white font-semibold px-6 py-3 rounded-lg shadow transition text-base w-full flex items-center justify-center gap-2 relative
+							${added ? "bg-green-600" : "hover:bg-secondary"}
+							${loading ? "opacity-70 cursor-not-allowed" : ""}
+						`}
+						onClick={handleAdd}
+						disabled={loading}
 					>
-						<span>Agregar al carrito</span>
-						<span className="font-bold">×{qty}</span>
+						{added ? (
+							<span className="inline-flex items-center gap-1">
+								<svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
+									<path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+								</svg>
+								¡Agregado!
+							</span>
+						) : loading ? "Agregando..." : (
+							<>
+								<span>Agregar al carrito</span>
+								<span className="font-bold">×{qty}</span>
+							</>
+						)}
+						{units > 0 && (
+							<span className="absolute right-3 bottom-2 bg-blue-100 text-blue-700 text-xs px-2 py-0.5 rounded-full font-bold pointer-events-none">
+								x{units}
+							</span>
+						)}
 					</button>
 				</div>
 			</div>
@@ -158,6 +192,7 @@ function useQueryParam(name) {
 
 export default function BuscarPage() {
 	const { token } = useAuth();
+	const { refreshCarrito } = useCart();
 	const searchParam = useQueryParam('search')
 	const [query, setQuery] = useState(searchParam)
 	const [marcas, setMarcas] = useState([])
@@ -172,6 +207,9 @@ export default function BuscarPage() {
 	const [loading, setLoading] = useState(true)
 	const [error, setError] = useState("")
 	const [categoriasApi, setCategoriasApi] = useState([])
+
+	const [page, setPage] = useState(0);
+	const [pageSize, setPageSize] = useState(12);
 
 	// Fetch categorías desde el backend
 	useEffect(() => {
@@ -202,22 +240,31 @@ export default function BuscarPage() {
 				if (promo) params.push(`oferta=true`);
 				if (precioMin) params.push(`precioMin=${precioMin}`);
 				if (precioMax) params.push(`precioMax=${precioMax}`);
+				params.push(`page=${page}`);
+				params.push(`size=${pageSize}`);
 				if (params.length > 0) url += "?" + params.join("&");
+
+				// Ejemplo de URL generada:
+				// http://localhost:4040/producto?categoriaId=1&page=0&size=12
 
 				const res = await fetch(url);
 				if (!res.ok) throw new Error("Error al cargar productos");
 				const data = await res.json();
 				setProductos(Array.isArray(data.content) ? data.content : []);
+				setTotalPages(data.totalPages || Math.ceil((data.totalElements || data.content?.length || 0) / pageSize));
+				setTotalElements(data.totalElements || 0);
 			} catch (err) {
 				setError("No se pudieron cargar los productos.");
 				setProductos([]);
+				setTotalPages(1);
+				setTotalElements(0);
 			} finally {
 				setLoading(false)
 			}
 		}
 		fetchProductos();
 	// eslint-disable-next-line
-	}, [query, marcas, categorias, subcategorias, promo, precioMin, precioMax]);
+	}, [query, marcas, categorias, subcategorias, promo, precioMin, precioMax, page, pageSize]);
 
 	useEffect(() => {
 		setQuery(searchParam)
@@ -276,8 +323,24 @@ export default function BuscarPage() {
 					Authorization: `Bearer ${token}`,
 				},
 			});
+			refreshCarrito();
 		} catch {}
 	}
+
+	// Para animación visual en ProductCard
+	const [addedId, setAddedId] = useState(null);
+	const [unitsMap, setUnitsMap] = useState({});
+
+	const handleAddToCartWithAnim = async (id, cantidad) => {
+		await handleAddToCart(id, cantidad);
+		setUnitsMap((prev) => ({ ...prev, [id]: (prev[id] || 0) + cantidad }));
+		setAddedId(id);
+		setTimeout(() => setAddedId(null), 1200);
+	};
+
+	// Paginación
+	const [totalPages, setTotalPages] = useState(1);
+	const [totalElements, setTotalElements] = useState(0);
 
 	return (
 		<div className="w-full max-w-[1600px] mx-auto px-2 sm:px-6 py-8">
@@ -397,11 +460,32 @@ export default function BuscarPage() {
 									<option key={opt.value} value={opt.value}>{opt.label}</option>
 								))}
 							</select>
+							{/* Mostrar por página */}
+							<label htmlFor="pageSize" className="ml-4 text-sm text-gray-700">Mostrar:</label>
+							<select
+								id="pageSize"
+								value={pageSize}
+								onChange={e => { setPageSize(Number(e.target.value)); setPage(0); }}
+								className="px-2 py-1 border border-gray-200 rounded focus:ring-2 focus:ring-primary text-sm"
+							>
+								<option value={8}>8</option>
+								<option value={12}>12</option>
+								<option value={24}>24</option>
+								<option value={48}>48</option>
+							</select>
 						</div>
 					</div>
 					{loading ? (
-						<div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-6">
-							{Array.from({ length: 8 }).map((_, i) => (
+						<div
+							className="grid"
+							style={{
+								gridTemplateColumns: "repeat(auto-fit, minmax(210px, 1fr))",
+								gap: "2rem 2.5rem",
+								justifyContent: "center",
+								alignItems: "stretch",
+							}}
+						>
+							{Array.from({ length: pageSize }).map((_, i) => (
 								<SkeletonCard key={i} />
 							))}
 						</div>
@@ -410,29 +494,70 @@ export default function BuscarPage() {
 					) : productosFiltrados.length === 0 ? (
 						<div className="text-gray-500">No se encontraron productos con esos filtros.</div>
 					) : (
-						<div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-6">
-							{productosFiltrados.map((p, i) => (
-								<ProductCard
-									key={p.id || i}
-									id={p.id}
-									name={p.nombre}
-									brand={p.marca}
-									img={
-										(Array.isArray(p.imagenes) && p.imagenes[0]?.imagen)
-										|| (Array.isArray(p.imagenes) && typeof p.imagenes[0] === "string" && p.imagenes[0])
-										|| undefined
-									}
-									price={p.precio}
-									weight={p.unidad_medida}
-									offer={p.descuento > 0 ? `${p.descuento}% OFF` : undefined}
-									bestSeller={p.bestSeller}
-									onQuickView={setQuickView}
-									onAddToCart={handleAddToCart}
-								/>
-							))}
-						</div>
+						<>
+							<div
+								className="grid"
+								style={{
+									gridTemplateColumns: "repeat(auto-fit, minmax(210px, 1fr))",
+									gap: "2rem 2.5rem",
+									justifyContent: "center",
+									alignItems: "stretch",
+								}}
+							>
+								{productosFiltrados.map((p, i) => (
+									<ProductCard
+										key={p.id || i}
+										id={p.id}
+										name={p.nombre}
+										brand={p.marca}
+										img={
+											(Array.isArray(p.imagenes) && p.imagenes[0]?.imagen)
+											|| (Array.isArray(p.imagenes) && typeof p.imagenes[0] === "string" && p.imagenes[0])
+											|| undefined
+										}
+										price={p.precio}
+										weight={p.unidad_medida}
+										offer={p.descuento > 0 ? `${p.descuento}% OFF` : undefined}
+										bestSeller={p.bestSeller}
+										onQuickView={setQuickView}
+										onAddToCart={handleAddToCartWithAnim}
+										added={addedId === p.id}
+										units={unitsMap[p.id] || 0}
+									/>
+								))}
+							</div>
+							{/* Paginación */}
+							{totalPages > 1 && (
+								<div className="flex justify-center items-center gap-2 mt-8">
+									<button
+										className="px-3 py-1 rounded bg-accent text-primary font-semibold disabled:opacity-50"
+										onClick={() => setPage((p) => Math.max(0, p - 1))}
+										disabled={page === 0}
+									>
+										←
+									</button>
+									<span className="text-sm text-gray-600">
+										Página {page + 1} de {totalPages}
+									</span>
+									<button
+										className="px-3 py-1 rounded bg-accent text-primary font-semibold disabled:opacity-50"
+										onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
+										disabled={page >= totalPages - 1}
+									>
+										→
+									</button>
+									<span className="ml-4 text-xs text-gray-500">
+										Mostrando {productosFiltrados.length} de {totalElements || productosFiltrados.length} productos
+									</span>
+								</div>
+							)}
+						</>
 					)}
-					<ProductQuickView product={quickView} onClose={() => setQuickView(null)} />
+					<ProductQuickView
+						product={quickView}
+						onClose={() => setQuickView(null)}
+						onAddToCart={handleAddToCartWithAnim}
+					/>
 				</main>
 			</div>
 		</div>

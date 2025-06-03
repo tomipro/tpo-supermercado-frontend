@@ -2,6 +2,7 @@ import { useParams, Link, useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { useAuth } from "../auth/AuthProvider";
 import { useCart } from "../context/CartContext";
+import { motion, AnimatePresence } from "framer-motion";
 
 // Simulación de productos con más detalles
 const destacados = [
@@ -126,6 +127,8 @@ export default function ProductDetailPage() {
 	const [loading, setLoading] = useState(true);
 	const [addCartLoading, setAddCartLoading] = useState(false);
 	const [addCartMsg, setAddCartMsg] = useState("");
+	const [added, setAdded] = useState(false);
+	const [units, setUnits] = useState(0);
 
 	useEffect(() => {
 		setLoading(true);
@@ -266,6 +269,9 @@ export default function ProductDetailPage() {
 			if (res.ok) {
 				setAddCartMsg("Producto agregado al carrito.");
 				refreshCarrito();
+				setUnits(units + qty);
+				setAdded(true);
+				setTimeout(() => setAdded(false), 1200);
 			} else {
 				setAddCartMsg("No se pudo agregar al carrito.");
 			}
@@ -433,7 +439,7 @@ export default function ProductDetailPage() {
 							{origen && <span className="text-xs text-gray-400">Origen: {origen}</span>}
 						</div>
 						{/* Cantidad y agregar */}
-						<div className="flex items-center gap-3 mb-4">
+						<div className="flex items-center gap-3 mb-4 relative">
 							<label htmlFor="qty" className="text-sm text-gray-700">Cantidad:</label>
 							<input
 								id="qty"
@@ -451,6 +457,24 @@ export default function ProductDetailPage() {
 							>
 								{addCartLoading ? "Agregando..." : "Agregar al carrito"}
 							</button>
+							<AnimatePresence>
+								{added && (
+									<motion.span
+										initial={{ opacity: 0, y: 10, scale: 0.9 }}
+										animate={{ opacity: 1, y: -10, scale: 1.1 }}
+										exit={{ opacity: 0, y: 0, scale: 0.9 }}
+										transition={{ duration: 0.5 }}
+										className="absolute left-1/2 -translate-x-1/2 -top-7 bg-green-500 text-white text-xs px-3 py-1 rounded-full shadow font-bold pointer-events-none"
+									>
+										¡Agregado!
+									</motion.span>
+								)}
+							</AnimatePresence>
+							{units > 0 && (
+								<span className="absolute right-0 bottom-0 bg-blue-100 text-blue-700 text-xs px-2 py-0.5 rounded-full font-bold pointer-events-none">
+									x{units}
+								</span>
+							)}
 							{addCartMsg && (
 								<span className="ml-2 text-green-600 text-sm">{addCartMsg}</span>
 							)}
