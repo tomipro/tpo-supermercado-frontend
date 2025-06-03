@@ -133,7 +133,20 @@ export default function FinalizarCompraPage() {
         });
         if (!res.ok) throw new Error("No se pudo finalizar la compra");
         const ordenGenerada = await res.json();
-        setOrden(ordenGenerada);
+
+        // Si es envío, agregar la dirección seleccionada al objeto orden para mostrarla en el comprobante
+        let direccionElegida = null;
+        if (envio && direccionId && Array.isArray(direcciones)) {
+          direccionElegida = direcciones.find(d => String(d.id) === String(direccionId));
+        }
+        setOrden({
+          ...ordenGenerada,
+          direccion:
+            envio && direccionElegida
+              ? `${direccionElegida.calle} ${direccionElegida.numero}${direccionElegida.pisoDepto ? " Piso/Depto: " + direccionElegida.pisoDepto : ""}, ${direccionElegida.ciudad}, ${direccionElegida.provincia} (${direccionElegida.codigoPostal})`
+              : ordenGenerada.direccion || "Retiro en local",
+        });
+
         setMsg("¡Compra realizada con éxito!");
         setStep(3);
       } catch (e) {
