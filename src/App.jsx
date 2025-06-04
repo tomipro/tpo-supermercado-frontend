@@ -25,6 +25,7 @@ import StepComprobante from "./pages/StepComprobante";
 import StepEntrega from "./pages/StepEntrega";
 import StepPago from "./pages/StepPago";
 import MisDireccionesPage from "./pages/MisDireccionesPage";
+import Footer from "./components/Footer";
 
 import "./App.css";
 
@@ -102,6 +103,7 @@ function App() {
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </div>
+        <Footer />
       </div>
     </CartProvider>
   );

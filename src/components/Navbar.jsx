@@ -4,18 +4,6 @@ import { useAuth } from "../auth/AuthProvider";
 import { useCart } from "../context/CartContext";
 import DolarCotizacion from "../components/DolarCotizacion";
 
-const categoriesDropdown = [
-  { name: "Ver todos", to: "/categorias" },
-  { name: "Verdulería", to: "/categorias?cat=verduleria" },
-  { name: "Carnes", to: "/categorias?cat=carnes" },
-  { name: "Lácteos", to: "/categorias?cat=lacteos" },
-  { name: "Panadería", to: "/categorias?cat=panaderia" },
-  { name: "Snacks", to: "/categorias?cat=snacks" },
-  { name: "Bebidas", to: "/categorias?cat=bebidas" },
-  { name: "Limpieza", to: "/categorias?cat=limpieza" },
-  { name: "Cuidado personal", to: "/categorias?cat=cuidado-personal" },
-];
-
 const promosDropdown = [
   { name: "Ver todos", to: "/promociones" },
   { name: "2x1 en Gaseosas", to: "/promociones?promo=gaseosas" },
@@ -26,11 +14,6 @@ const promosDropdown = [
   { name: "Envío gratis", to: "/promociones?promo=envio-gratis" },
 ];
 
-const navLinks = [
-  { label: "Categorías", dropdown: categoriesDropdown },
-  { label: "Promociones", dropdown: promosDropdown },
-];
-
 export default function Navbar() {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
@@ -38,6 +21,9 @@ export default function Navbar() {
   const [dropdown, setDropdown] = useState(null);
   const [mobileDropdown, setMobileDropdown] = useState(null);
   const [userDropdown, setUserDropdown] = useState(false);
+  const [categoriesDropdown, setCategoriesDropdown] = useState([
+    { name: "Ver todos", to: "/categorias" },
+  ]);
   const userDropdownRef = useRef(null);
   const { usuario, isAuthenticated, logout } = useAuth();
   const { carrito, loading } = useCart();
@@ -71,6 +57,32 @@ export default function Navbar() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [userDropdown]);
 
+  // Fetch categorías reales del backend para el dropdown
+  useEffect(() => {
+    fetch("http://localhost:4040/categorias")
+      .then((res) => res.json())
+      .then((data) => {
+        const cats = Array.isArray(data.content) ? data.content : [];
+        setCategoriesDropdown(
+          [{ name: "Ver todos", to: "/categorias" }].concat(
+            cats.map((cat) => ({
+              name: cat.nombre,
+              to: `/categorias?cat=${cat.id}`,
+            }))
+          )
+        );
+      })
+      .catch(() => {
+        setCategoriesDropdown([{ name: "Ver todos", to: "/categorias" }]);
+      });
+  }, []);
+
+  // Solo reemplaza el dropdown de categorías en navLinks
+  const navLinks = [
+    { label: "Categorías", dropdown: categoriesDropdown },
+    // { to: '/admin', label: 'Admin' }, // Solo para admin, oculto por ahora
+  ];
+
   return (
     <>
       {/* Barra superior con el dólar */}
@@ -82,14 +94,23 @@ export default function Navbar() {
           </div>
         </div>
       </div>
+    <header className="sticky top-0 z-40 w-full bg-white/80 backdrop-blur-xl shadow-lg border-b border-gray-100">
+      <nav
+        className="max-w-[1600px] mx-auto flex items-center justify-between px-6 sm:px-14 h-[76px] gap-2"
+        style={{ width: "100%" }}
+      >
+        {/* Logo */}
+        <Link
+          to="/"
+          className="flex items-center gap-3 font-extrabold text-2xl tracking-tight text-primary hover:opacity-90 transition-opacity select-none"
+        >
+          <span className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-gradient-to-br from-primary to-secondary shadow-lg text-white text-3xl">
+            🛒
+          </span>
+          <span
+            className="hidden sm:inline font-black text-dark tracking-tight text-2xl"
+            style={{ letterSpacing: "-0.03em" }}
 
-      {/* Navbar principal */}
-      <header className="sticky top-0 z-40 w-full bg-white/80 backdrop-blur-xl shadow-lg border-b border-gray-100">
-        <nav className="max-w-[1600px] mx-auto flex items-center justify-between px-4 sm:px-8 h-[76px] gap-2">
-          {/* Logo */}
-          <Link
-            to="/"
-            className="flex items-center gap-3 font-extrabold text-2xl tracking-tight text-primary hover:opacity-90 transition-opacity select-none"
           >
             <span className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-gradient-to-br from-primary to-secondary shadow-lg text-white text-3xl">
               🛒
@@ -393,6 +414,31 @@ export default function Navbar() {
                     <Link
                       to="/carrito"
                       className="text-primary font-semibold hover:underline text-sm"
+              {/* Dropdown: rectangular, horizontal wrap, para categorías */}
+              {dropdown === "Categorías" && link.dropdown.length > 0 && (
+                <div
+                  className="absolute left-0 top-full mt-2 bg-white rounded-xl shadow-lg border border-gray-100 z-50 animate-fade-in"
+                  style={{
+                    minWidth: 400,
+                    maxWidth: 700,
+                    maxHeight: 420,
+                    overflowY: "auto",
+                    padding: "1rem 0.7rem",
+                    display: "grid",
+                    gridTemplateColumns: "repeat(auto-fit, minmax(170px, 1fr))",
+                    gap: "0.2rem 0.3rem",
+                  }}
+                >
+                  {link.dropdown.map((item) => (
+                    <Link
+                      key={item.name}
+                      to={item.to}
+                      className="px-2 py-2 text-dark hover:bg-accent/40 hover:text-primary rounded transition text-base font-medium"
+                      tabIndex={0}
+                      style={{
+                        whiteSpace: "nowrap",
+                      }}
+                      onClick={() => setDropdown(null)}
                     >
                       Ver carrito →
                     </Link>
@@ -450,6 +496,14 @@ export default function Navbar() {
                     >
                       Mis direcciones
                     </Link>
+          <NavLink
+            to="/buscar"
+            className="px-5 py-2 rounded-full font-semibold transition-all duration-200 text-base text-dark hover:bg-accent/70 hover:text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+          >
+            Todos los productos
+          </NavLink>
+        </div>
+
 
                     {usuario?.rol === "ADMIN" && (
                       <Link
@@ -511,6 +565,98 @@ export default function Navbar() {
                     strokeLinejoin="round"
                     d="M4 8h16M4 16h16"
                   />
+
+                  <>
+                    <ul className="divide-y divide-gray-100 max-h-60 overflow-y-auto">
+                      {carrito.items.slice(0, 5).map((item) => (
+                        <li
+                          key={item.productoId}
+                          className="py-2 flex items-center gap-2"
+                        >
+                          <div className="flex-1">
+                            <div className="font-semibold text-sm">
+                              {item.nombreProducto}
+                            </div>
+                            <div className="text-xs text-gray-500">
+                              x{item.cantidad}
+                            </div>
+                            <div className="text-xs text-gray-700">
+                              {/* Precio unitario */}
+                              {item.precioUnitario !== undefined && item.precioUnitario !== null
+                                ? `Precio: $${Number(item.precioUnitario).toFixed(2)}`
+                                : ""}
+                            </div>
+                            <div className="text-[10px] text-gray-400">
+                              {/* Precio sin impuestos nacionales */}
+                              {item.precioUnitario !== undefined && item.precioUnitario !== null
+                                ? `Sin IVA: $${Math.round(Number(item.precioUnitario) / 1.21)}`
+                                : ""}
+                            </div>
+                          </div>
+                          <div className="text-sm font-bold text-primary text-right min-w-[60px]">
+                            {/* Subtotal por producto */}
+                            {item.subtotal !== undefined && item.subtotal !== null
+                              ? `$${Number(item.subtotal).toFixed(2)}`
+                              : (item.precioUnitario !== undefined && item.cantidad !== undefined
+                                ? `$${(Number(item.precioUnitario) * Number(item.cantidad)).toFixed(2)}`
+                                : "-")}
+                            <div className="text-[10px] text-gray-400 font-normal">
+                              {/* Subtotal sin IVA */}
+                              {(item.precioUnitario !== undefined && item.cantidad !== undefined)
+                                ? `Sin IVA: $${Math.round((Number(item.precioUnitario) * Number(item.cantidad)) / 1.21)}`
+                                : ""}
+                            </div>
+                          </div>
+                        </li>
+                      ))}
+                    </ul>
+                    {/* Total del carrito */}
+                    <div className="mt-3 flex flex-col gap-1 border-t pt-3">
+                      <div className="flex justify-between items-center">
+                        <span className="font-semibold text-gray-700">Total:</span>
+                        <span className="font-bold text-lg text-green-700">
+                          {(carrito.total !== undefined && carrito.total !== null && !isNaN(Number(carrito.total)))
+                            ? `$${Number(carrito.total).toFixed(2)}`
+                            : (() => {
+                                const total = carrito.items.reduce((sum, item) => {
+                                  if (item.subtotal !== undefined && item.subtotal !== null && !isNaN(Number(item.subtotal))) {
+                                    return sum + Number(item.subtotal);
+                                  }
+                                  if (item.precioUnitario !== undefined && item.cantidad !== undefined) {
+                                    return sum + (Number(item.precioUnitario) * Number(item.cantidad));
+                                  }
+                                  return sum;
+                                }, 0);
+                                return `$${total.toFixed(2)}`;
+                              })()
+                          }
+                        </span>
+                      </div>
+                      <div className="flex justify-between items-center text-[12px] text-gray-500">
+                        <span>Sin IVA (21%):</span>
+                        <span>
+                          {(() => {
+                            // Calcula el total sin IVA
+                            let total = 0;
+                            if (carrito.total !== undefined && carrito.total !== null && !isNaN(Number(carrito.total))) {
+                              total = Number(carrito.total);
+                            } else {
+                              total = carrito.items.reduce((sum, item) => {
+                                if (item.subtotal !== undefined && item.subtotal !== null && !isNaN(Number(item.subtotal))) {
+                                  return sum + Number(item.subtotal);
+                                }
+                                if (item.precioUnitario !== undefined && item.cantidad !== undefined) {
+                                  return sum + (Number(item.precioUnitario) * Number(item.cantidad));
+                                }
+                                return sum;
+                              }, 0);
+                            }
+                            return `$${Math.round(total / 1.21)}`;
+                          })()}
+                        </span>
+                      </div>
+                    </div>
+                  </>
                 )}
               </svg>
             </button>
