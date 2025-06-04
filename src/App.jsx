@@ -25,6 +25,7 @@ import StepComprobante from "./pages/StepComprobante";
 import StepEntrega from "./pages/StepEntrega";
 import StepPago from "./pages/StepPago";
 import MisDireccionesPage from "./pages/MisDireccionesPage";
+import Footer from "./components/Footer";
 
 import "./App.css";
 
@@ -54,10 +55,7 @@ function App() {
                 path="/cambiar-contrasena"
                 element={<ResetPasswordPageLog />}
               />
-              <Route
-                path="/finalizar-compra"
-                element={<FinalizarCompraPage />}
-              />
+              <Route path="/finalizar-compra" element={<FinalizarCompraPage />} />
               <Route path="/step-comprobante" element={<StepComprobante />} />
               <Route path="/step-entrega" element={<StepEntrega />} />
               <Route path="/step-pago" element={<StepPago />} />
@@ -84,10 +82,7 @@ function App() {
               {/* Rutas de admin con layout */}
               <Route path="/admin" element={<AdminPage />}>
                 <Route path="productos" element={<AdminPanelProductPage />} />
-                <Route
-                  path="categorias"
-                  element={<AdminPanelCategoriesPage />}
-                />
+                <Route path="categorias" element={<AdminPanelCategoriesPage />} />
               </Route>
               <Route path="/mis-pedidos" element={<MisPedidosPage />} />
               <Route path="/mis-pedidos/:id" element={<PedidoDetallePage />} />
@@ -95,13 +90,17 @@ function App() {
                 path="/cambiar-contrasena"
                 element={<ResetPasswordPageLog />}
               />
-              <Route path="/mis-direcciones" element={<MisDireccionesPage />} />
+              <Route
+                path="/mis-direcciones"
+                element={<MisDireccionesPage />}
+              />
             </Route>
 
             {/* Ruta catch-all */}
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </div>
+        <Footer />
       </div>
     </CartProvider>
   );

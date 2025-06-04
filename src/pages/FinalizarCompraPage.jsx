@@ -4,12 +4,10 @@ import StepEntrega from "./StepEntrega";
 import StepPago from "./StepPago";
 import StepComprobante from "./StepComprobante";
 import { AnimatePresence } from "framer-motion";
-import { useCart } from "../context/CartContext";
 
 export default function FinalizarCompraPage() {
   // Hook de autenticación, trae el token del usuario logueado
   const { token } = useAuth();
-  const { refreshCarrito } = useCart();
 
   // Estados principales del flujo de compra
   const [direcciones, setDirecciones] = useState([]); // Direcciones guardadas del usuario
@@ -81,23 +79,18 @@ export default function FinalizarCompraPage() {
    * Calcula el total final de la compra (sumando $2000 si hay envío).
    */
   const calcularTotal = () => {
-    if (!carrito || !Array.isArray(carrito.items) || carrito.items.length === 0)
-      return 0;
+    if (!carrito || !Array.isArray(carrito.items) || carrito.items.length === 0) return 0;
     // Sumar subtotales de los items si carrito.total no es válido
     let total = 0;
     if (typeof carrito.total === "number" && !isNaN(carrito.total)) {
       total = carrito.total;
     } else {
       total = carrito.items.reduce((sum, item) => {
-        if (
-          item.subtotal !== undefined &&
-          item.subtotal !== null &&
-          !isNaN(Number(item.subtotal))
-        ) {
+        if (item.subtotal !== undefined && item.subtotal !== null && !isNaN(Number(item.subtotal))) {
           return sum + Number(item.subtotal);
         }
         if (item.precioUnitario !== undefined && item.cantidad !== undefined) {
-          return sum + Number(item.precioUnitario) * Number(item.cantidad);
+          return sum + (Number(item.precioUnitario) * Number(item.cantidad));
         }
         return sum;
       }, 0);
@@ -144,27 +137,18 @@ export default function FinalizarCompraPage() {
         // Si es envío, agregar la dirección seleccionada al objeto orden para mostrarla en el comprobante
         let direccionElegida = null;
         if (envio && direccionId && Array.isArray(direcciones)) {
-          direccionElegida = direcciones.find(
-            (d) => String(d.id) === String(direccionId)
-          );
+          direccionElegida = direcciones.find(d => String(d.id) === String(direccionId));
         }
         setOrden({
           ...ordenGenerada,
           direccion:
             envio && direccionElegida
-              ? `${direccionElegida.calle} ${direccionElegida.numero}${
-                  direccionElegida.pisoDepto
-                    ? " Piso/Depto: " + direccionElegida.pisoDepto
-                    : ""
-                }, ${direccionElegida.ciudad}, ${direccionElegida.provincia} (${
-                  direccionElegida.codigoPostal
-                })`
+              ? `${direccionElegida.calle} ${direccionElegida.numero}${direccionElegida.pisoDepto ? " Piso/Depto: " + direccionElegida.pisoDepto : ""}, ${direccionElegida.ciudad}, ${direccionElegida.provincia} (${direccionElegida.codigoPostal})`
               : ordenGenerada.direccion || "Retiro en local",
         });
 
         setMsg("¡Compra realizada con éxito!");
         setStep(3);
-        await refreshCarrito();
       } catch (e) {
         setError(e.message || "Error en el pago");
       } finally {
@@ -187,11 +171,9 @@ export default function FinalizarCompraPage() {
   // Renderiza cada step según el estado actual
   return (
     <div className="max-w-3xl mx-auto mt-12 p-6 bg-white rounded-2xl shadow-lg">
-      {step !== 3 && (
-        <h2 className="text-3xl font-extrabold mb-8 text-center text-blue-700 tracking-tight">
-          Finalizar compra
-        </h2>
-      )}
+      <h2 className="text-3xl font-extrabold mb-8 text-center text-blue-700 tracking-tight">
+        Finalizar compra
+      </h2>
       <AnimatePresence mode="wait">
         {/* Paso 1: Selección de método de entrega */}
         {step === 1 && (
