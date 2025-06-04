@@ -64,18 +64,21 @@ export default function Navbar() {
     fetch("http://localhost:4040/categorias")
       .then((res) => res.json())
       .then((data) => {
-        const cats = Array.isArray(data.content) ? data.content : [];
+        const cats = Array.isArray(data.content)
+          ? // Filtra solo las que tienen parentId === null (principales)
+            data.content.filter((cat) => cat.parentId === null)
+          : [];
         setCategoriesDropdown(
-          [{ name: "Ver todos", to: "/categorias" }].concat(
+          [{ name: "Ver todos", to: "/buscar" }].concat(
             cats.map((cat) => ({
               name: cat.nombre,
-              to: `/categorias?cat=${cat.id}`,
+              to: `/buscar?categoriaId=${cat.id}`,
             }))
           )
         );
       })
       .catch(() => {
-        setCategoriesDropdown([{ name: "Ver todos", to: "/categorias" }]);
+        setCategoriesDropdown([{ name: "Ver todos", to: "/buscar" }]);
       });
   }, []);
 
@@ -177,7 +180,7 @@ export default function Navbar() {
                 {/* Dropdown: rectangular, horizontal wrap, para categorías */}
                 {dropdown === "Categorías" && link.dropdown.length > 0 && (
                   <div
-                    className="absolute left-0 top-full mt-2 bg-white rounded-xl shadow-lg border border-gray-100 z-50 animate-fade-in"
+                    className="absolute left-0 top-full mt-0 bg-white rounded-xl shadow-lg border border-gray-100 z-50 animate-fade-in"
                     style={{
                       minWidth: 400,
                       maxWidth: 700,

@@ -60,7 +60,7 @@ export default function HomePage() {
           Array.isArray(catData.content)
             ? catData.content.map((c) => ({
                 name: c.nombre,
-                to: `/buscar?categoriaId=${c.id}`, // Cambia esto
+                to: `/buscar?categoriaId=${c.id}`,
                 img:
                   (c.productos && c.productos[0]?.imagenes?.[0]?.imagen) ||
                   FALLBACK_IMG,
@@ -554,7 +554,9 @@ export default function HomePage() {
                 }
                 price={prod.precio}
                 weight={prod.unidadMedida}
-                offer={prod.descuento > 0 ? `${prod.descuento}% OFF` : undefined}
+                offer={
+                  prod.descuento > 0 ? `${prod.descuento}% OFF` : undefined
+                }
                 bestSeller={prod.bestSeller}
                 onQuickView={setQuickView}
               />
