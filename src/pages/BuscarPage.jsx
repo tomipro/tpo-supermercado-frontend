@@ -6,41 +6,6 @@ import { useCart } from "../context/CartContext";
 
 // todo esto se  va cuando integramos backend.. osea hariamos un fetch de estas cosas
 
-const CATEGORIAS = [
-  {
-    value: "verduleria",
-    label: "Verdulería",
-    sub: ["Frutas", "Verduras", "Tubérculos"],
-  },
-  {
-    value: "carnes",
-    label: "Carnes",
-    sub: ["Vacuna", "Pollo", "Cerdo", "Pescado"],
-  },
-  { value: "lacteos", label: "Lácteos", sub: ["Leche", "Quesos", "Yogur"] },
-  {
-    value: "panaderia",
-    label: "Panadería",
-    sub: ["Pan", "Facturas", "Tortillas"],
-  },
-  {
-    value: "snacks",
-    label: "Snacks",
-    sub: ["Galletitas", "Chocolates", "Papas"],
-  },
-  { value: "bebidas", label: "Bebidas", sub: ["Sin alcohol", "Con alcohol"] },
-  {
-    value: "limpieza",
-    label: "Limpieza",
-    sub: ["Ropa", "Superficies", "Cocina"],
-  },
-  {
-    value: "cuidado-personal",
-    label: "Cuidado personal",
-    sub: ["Cabello", "Cuerpo", "Higiene"],
-  },
-];
-
 const MARCAS = [
   "La Serenísima",
   "Bimbo",
