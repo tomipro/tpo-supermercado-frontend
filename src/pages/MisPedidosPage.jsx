@@ -2,7 +2,6 @@ import { Link } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { useAuth } from "../auth/AuthProvider";
 
-// Integración con backend para traer pedidos del usuario autenticado
 export default function MisPedidosPage() {
   const { token, usuario } = useAuth();
   const [pedidos, setPedidos] = useState([]);
@@ -12,7 +11,6 @@ export default function MisPedidosPage() {
   useEffect(() => {
     setLoading(true);
     setError("");
-    // Usar el id del usuario autenticado en la URL
     if (!usuario || !usuario.id) {
       setError("No se pudo obtener el usuario.");
       setLoading(false);
@@ -28,11 +26,26 @@ export default function MisPedidosPage() {
         return res.json();
       })
       .then((data) => {
-        // Si el backend devuelve un array directamente
-        if (Array.isArray(data)) setPedidos(data);
-        // Si devuelve { content: [...] }
-        else if (data && Array.isArray(data.content)) setPedidos(data.content);
-        else setPedidos([]);
+        let pedidosData = [];
+
+        // Obtener el array de pedidos
+        if (Array.isArray(data)) pedidosData = data;
+        else if (data && Array.isArray(data.content))
+          pedidosData = data.content;
+
+        // Ordenar los pedidos por fecha (más nuevo primero)
+        const pedidosOrdenados = pedidosData.sort((a, b) => {
+          const fechaA = a.fechaCreacion || a.fecha;
+          const fechaB = b.fechaCreacion || b.fecha;
+
+          // Convertir a timestamp para comparar
+          const timeA = new Date(fechaA).getTime();
+          const timeB = new Date(fechaB).getTime();
+
+          return timeB - timeA; // Orden descendente (más nuevo primero)
+        });
+
+        setPedidos(pedidosOrdenados);
       })
       .catch((err) => setError(err.message || "Error al cargar pedidos."))
       .finally(() => setLoading(false));
@@ -60,7 +73,8 @@ export default function MisPedidosPage() {
                   Pedido #{pedido.ordenId || pedido.id}
                 </div>
                 <div className="text-sm text-muted mb-1">
-                  Fecha: {pedido.fechaCreacion
+                  Fecha:{" "}
+                  {pedido.fechaCreacion
                     ? new Date(pedido.fechaCreacion).toLocaleDateString("es-AR")
                     : pedido.fecha}
                 </div>
@@ -68,17 +82,17 @@ export default function MisPedidosPage() {
                   Estado: <span className="font-semibold">{pedido.estado}</span>
                 </div>
                 <div className="text-sm text-muted">
-                  Total: <span className="font-bold text-primary">
-                    ${typeof pedido.total === "number" && !isNaN(pedido.total)
+                  Total:{" "}
+                  <span className="font-bold text-primary">
+                    $
+                    {typeof pedido.total === "number" && !isNaN(pedido.total)
                       ? pedido.total.toLocaleString("es-AR")
                       : pedido.total}
                   </span>
                 </div>
                 <div className="text-xs text-gray-400">
                   Precio sin impuestos nacionales: $
-                  {pedido.total
-                    ? Math.round(Number(pedido.total) / 1.21)
-                    : "-"}
+                  {pedido.total ? Math.round(Number(pedido.total) / 1.21) : "-"}
                 </div>
               </div>
               <div className="mt-4 sm:mt-0 flex flex-col items-end gap-2">

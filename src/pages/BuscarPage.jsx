@@ -268,15 +268,11 @@ export default function BuscarPage() {
           params.push(`categoriaId=${categorias[0]}`); // Solo el primer ID
         if (subcategorias.length > 0)
           params.push(`subcategoriaId=${subcategorias.join(",")}`);
-        if (promo) params.push(`oferta=true`);
         if (precioMin) params.push(`precioMin=${precioMin}`);
         if (precioMax) params.push(`precioMax=${precioMax}`);
         params.push(`page=${page}`);
         params.push(`size=${pageSize}`);
         if (params.length > 0) url += "?" + params.join("&");
-
-        // Ejemplo de URL generada:
-        // http://localhost:4040/producto?categoriaId=1&page=0&size=12
 
         const res = await fetch(url);
         if (!res.ok) throw new Error("Error al cargar productos");
@@ -324,9 +320,10 @@ export default function BuscarPage() {
     .map((sub) => ({ id: String(sub.id), nombre: sub.nombre }))
     .filter((v, i, arr) => arr.findIndex((x) => x.id === v.id) === i);
 
-  // Solo productos con stock > 0
+  // Solo productos con stock > 0 y, si promo está activo, descuento > 0
   const productosFiltrados = [...productos]
     .filter((p) => Number(p.stock) > 0)
+    .filter((p) => !promo || Number(p.descuento) > 0)
     .sort((a, b) => {
       if (sortBy === "precio-asc") return a.precio - b.precio;
       if (sortBy === "precio-desc") return b.precio - a.precio;
