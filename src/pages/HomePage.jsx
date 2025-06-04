@@ -253,23 +253,29 @@ export default function HomePage() {
   }
 
   function CategoryCard({ name, img, to }) {
-    const [imgSrc, setImgSrc] = useState(img);
+    // Mostramos la inicial grande en vez de imagen
+    const initial = name?.[0]?.toUpperCase() || "?";
     return (
       <Link
         to={to}
         className="flex flex-col items-center bg-white rounded-xl shadow hover:shadow-xl transition group p-3 sm:p-4 border border-gray-100 hover:border-primary"
         style={{
-          margin: "0 12px 24px 12px", // Espaciado horizontal y vertical entre cards
+          margin: "0 12px 24px 12px",
           minWidth: 140,
           maxWidth: 180,
         }}
       >
-        <img
-          src={imgSrc}
-          alt={name}
-          onError={() => setImgSrc(FALLBACK_IMG)}
-          className="w-16 h-16 sm:w-20 sm:h-20 object-cover rounded-full mb-2 border-2 border-accent group-hover:scale-105 transition"
-        />
+        <div
+          className="w-16 h-16 sm:w-20 sm:h-20 flex items-center justify-center rounded-full mb-2 border-2 border-accent group-hover:scale-105 transition bg-gray-100 text-primary"
+          style={{
+            fontSize: "2.5rem",
+            fontWeight: 800,
+            letterSpacing: "-0.03em",
+            userSelect: "none",
+          }}
+        >
+          {initial}
+        </div>
         <span className="text-base sm:text-lg font-medium text-dark group-hover:text-primary transition text-center">
           {name}
         </span>
@@ -469,9 +475,11 @@ export default function HomePage() {
       </div>
       {/* Categorías */}
       <div className="w-full max-w-[1400px] px-2 sm:px-6 mb-12">
-        <h2 className="text-2xl sm:text-3xl font-semibold mb-6 text-dark">
-          Categorías populares
-        </h2>
+        <Link to="/categorias">
+          <h2 className="text-2xl sm:text-3xl font-semibold mb-6 text-dark hover:text-primary transition cursor-pointer">
+            Categorías populares
+          </h2>
+        </Link>
         {loadingCategories ? (
           <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-8 gap-x-6 gap-y-8">
             {Array.from({ length: 8 }).map((_, i) => (

@@ -52,14 +52,17 @@ export default function CategoriesPage() {
               to={`/buscar?categoriaId=${cat.id}`}
               className="flex flex-col items-center bg-white rounded-xl shadow hover:shadow-xl transition group p-4 border border-gray-100 hover:border-primary"
             >
-              <img
-                src={
-                  (cat.productos && cat.productos[0]?.imagenes?.[0]?.imagen) ||
-                  FALLBACK_IMG
-                }
-                alt={cat.nombre}
-                className="w-20 h-20 object-cover rounded-full mb-2 border-2 border-accent group-hover:scale-105 transition"
-              />
+              <div
+                className="w-20 h-20 flex items-center justify-center rounded-full mb-2 border-2 border-accent group-hover:scale-105 transition bg-gray-100 text-primary"
+                style={{
+                  fontSize: "3rem",
+                  fontWeight: 800,
+                  letterSpacing: "-0.03em",
+                  userSelect: "none",
+                }}
+              >
+                {cat.nombre?.[0]?.toUpperCase() || "?"}
+              </div>
               <span className="text-lg font-medium text-dark group-hover:text-primary transition text-center">
                 {cat.nombre}
               </span>

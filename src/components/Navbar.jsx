@@ -3,16 +3,8 @@ import { useState, useEffect, useRef } from "react";
 import { useAuth } from "../auth/AuthProvider";
 import { useCart } from "../context/CartContext";
 import DolarCotizacion from "../components/DolarCotizacion";
+import dinoLogo from "../assets/dino_logo.png";
 
-const promosDropdown = [
-  { name: "Ver todos", to: "/promociones" },
-  { name: "2x1 en Gaseosas", to: "/promociones?promo=gaseosas" },
-  {
-    name: "20% OFF en Frutas y Verduras",
-    to: "/promociones?promo=frutas-verduras",
-  },
-  { name: "Envío gratis", to: "/promociones?promo=envio-gratis" },
-];
 
 export default function Navbar() {
   const [open, setOpen] = useState(false);
@@ -85,6 +77,22 @@ export default function Navbar() {
     // { to: '/admin', label: 'Admin' }, // Solo para admin, oculto por ahora
   ];
 
+  // Cerrar dropdown de categorías al clickear fuera
+  const dropdownRef = useRef(null);
+  useEffect(() => {
+    if (!dropdown) return;
+    function handleClickOutside(e) {
+      if (
+        dropdownRef.current &&
+        !dropdownRef.current.contains(e.target)
+      ) {
+        setDropdown(null);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [dropdown]);
+
   return (
     <>
       {/* Barra superior con el dólar */}
@@ -107,7 +115,19 @@ export default function Navbar() {
             className="flex items-center gap-3 font-extrabold text-2xl tracking-tight text-primary hover:opacity-90 transition-opacity select-none"
           >
             <span className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-gradient-to-br from-primary to-secondary shadow-lg text-white text-3xl">
-              🛒
+              <img
+                src={dinoLogo}
+                alt="Logo Dino"
+                style={{
+                  width: 44,
+                  height: 44,
+                  objectFit: "contain",
+                  display: "block",
+                  margin: "auto",
+                  transform: "scale(1.25)",
+                }}
+                draggable={false}
+              />
             </span>
             <span
               className="hidden sm:inline font-black text-dark tracking-tight text-2xl"
@@ -143,11 +163,7 @@ export default function Navbar() {
               <div
                 key={link.label}
                 className="relative"
-                onMouseEnter={() => setDropdown(link.label)}
-                onMouseLeave={() => setDropdown(null)}
-                onFocus={() => setDropdown(link.label)}
-                onBlur={() => setDropdown(null)}
-                tabIndex={0}
+                ref={link.label === "Categorías" ? dropdownRef : undefined}
               >
                 <button
                   className={`px-5 py-2 rounded-full font-semibold transition-all duration-200 text-base flex items-center gap-1 ${
@@ -158,6 +174,9 @@ export default function Navbar() {
                   aria-haspopup="true"
                   aria-expanded={dropdown === link.label}
                   type="button"
+                  onClick={() =>
+                    setDropdown(dropdown === link.label ? null : link.label)
+                  }
                 >
                   {link.label}
                   <svg
@@ -174,7 +193,6 @@ export default function Navbar() {
                     />
                   </svg>
                 </button>
-                {/* Dropdown: rectangular, horizontal wrap, para categorías */}
                 {dropdown === "Categorías" && link.dropdown.length > 0 && (
                   <div
                     className="absolute left-0 top-full mt-2 bg-white rounded-xl shadow-lg border border-gray-100 z-50 animate-fade-in"

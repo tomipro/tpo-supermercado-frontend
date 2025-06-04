@@ -8,14 +8,17 @@ export default function AdminPanelProductPage() {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [productos, setProductos] = useState([]);
+  const [page, setPage] = useState(0);
+  const [pageSize, setPageSize] = useState(12);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalElements, setTotalElements] = useState(0);
   const navigate = useNavigate();
   const FALLBACK_IMG = "https://cdn-icons-png.flaticon.com/512/1046/1046857.png"
-
 
   useEffect(() => {
     async function fetchProductos() {
       try {
-        const res = await fetch("http://localhost:4040/producto", {
+        const res = await fetch(`http://localhost:4040/producto?page=${page}&size=${pageSize}`, {
           headers: {
             Authorization: `Bearer ${token}`,
           },
@@ -24,8 +27,12 @@ export default function AdminPanelProductPage() {
           const data = await res.json();
           if (Array.isArray(data.content)) {
             setProductos(data.content);
+            setTotalPages(data.totalPages || 1);
+            setTotalElements(data.totalElements || data.content.length || 0);
           } else {
             setProductos([]);
+            setTotalPages(1);
+            setTotalElements(0);
           }
         } else {
           setError("No se pudieron cargar los productos.");
@@ -35,7 +42,7 @@ export default function AdminPanelProductPage() {
       }
     }
     fetchProductos();
-  }, [token]);
+  }, [token, page, pageSize]);
 
   const handleEdit = (producto) => {
     navigate(`/editar-producto/${producto.id}`);
@@ -51,6 +58,7 @@ export default function AdminPanelProductPage() {
     if (res.ok) {
       setSuccess("Producto eliminado correctamente.");
       setProductos((prev) => prev.filter((p) => p.id !== producto.id));
+      setTotalElements((prev) => prev - 1);
     } else {
       setError("No se pudo eliminar el producto.");
     }
@@ -97,6 +105,49 @@ export default function AdminPanelProductPage() {
           />
         ))}
       </div>
+      {/* Paginación */}
+      {totalPages > 1 && (
+        <div className="flex justify-center items-center gap-2 mt-8">
+          <button
+            className="px-3 py-1 rounded bg-accent text-primary font-semibold disabled:opacity-50"
+            onClick={() => setPage((p) => Math.max(0, p - 1))}
+            disabled={page === 0}
+            title="Página anterior"
+          >
+            ←
+          </button>
+          <span className="text-sm text-gray-600">
+            Página {page + 1} de {totalPages}
+          </span>
+          <button
+            className="px-3 py-1 rounded bg-accent text-primary font-semibold disabled:opacity-50"
+            onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
+            disabled={page >= totalPages - 1}
+            title="Página siguiente"
+          >
+            →
+          </button>
+          <span className="ml-4 text-xs text-gray-500">
+            Mostrando {productos.length} de {totalElements} productos
+          </span>
+          <label className="ml-4 text-sm text-gray-700">
+            Mostrar:
+            <select
+              value={pageSize}
+              onChange={e => {
+                setPageSize(Number(e.target.value));
+                setPage(0);
+              }}
+              className="ml-2 px-2 py-1 border border-gray-200 rounded focus:ring-2 focus:ring-primary text-sm"
+            >
+              <option value={6}>6</option>
+              <option value={12}>12</option>
+              <option value={24}>24</option>
+              <option value={48}>48</option>
+            </select>
+          </label>
+        </div>
+      )}
     </div>
   );
 }

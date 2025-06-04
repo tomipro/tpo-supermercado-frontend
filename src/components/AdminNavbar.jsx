@@ -1,4 +1,5 @@
 import { useNavigate, useLocation } from "react-router-dom";
+import DolarCotizacion from "./DolarCotizacion";
 
 export default function AdminNavBar() {
   const navigate = useNavigate();
