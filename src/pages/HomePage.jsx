@@ -2,6 +2,9 @@ import { Link } from "react-router-dom";
 import { useState, useEffect } from "react";
 import ProductCard from "../components/ProductCard";
 import { useAuth } from "../auth/AuthProvider";
+import promoBannerImg from "../assets/banner2.jpeg";
+import promoBannerImg2 from "../assets/banner3.jpg";
+import promoBannerImg4 from "../assets/banner4.webp";
 
 const FALLBACK_IMG = "https://cdn-icons-png.flaticon.com/512/1046/1046857.png";
 
@@ -23,29 +26,20 @@ export default function HomePage() {
   const [prodPage, setProdPage] = useState(0);
   const productsPerPage = 6;
 
-  // Fetch banners (puede ser endpoint propio, aquí ejemplo hardcodeado)
   useEffect(() => {
     setBanners([
       {
-        img: "https://images.unsplash.com/photo-1504674900247-0877df9cc836?auto=format&fit=crop&w=1200&q=80",
+        img: promoBannerImg, // usa la imagen local
         title: "¡Super Ofertas de la Semana!",
-        desc: "Aprovechá descuentos exclusivos en cientos de productos.",
-        cta: "Ver promociones",
-        to: "/promociones",
+        desc: "Encontra descuentos exclusivos en cientos de productos filtrando por \"En promocion\".",
+        cta: "Explorar promociones",
+        to: "/buscar",
       },
       {
-        img: "https://images.unsplash.com/photo-1519864600265-abb23847ef2c?auto=format&fit=crop&w=1200&q=80",
-        title: "Envío gratis en compras mayores a $15.000",
-        desc: "Recibí tu compra en casa sin cargo.",
-        cta: "Ver condiciones",
-        to: "/",
+        img: promoBannerImg2
       },
       {
-        img: "https://images.unsplash.com/photo-1464306076886-debca5e8a6b0?auto=format&fit=crop&w=1200&q=80",
-        title: "¡Registrate y obtené 10% OFF!",
-        desc: "Solo para nuevos usuarios. ¡No te lo pierdas!",
-        cta: "Registrarse",
-        to: "/signup",
+        img: promoBannerImg4,
       },
     ]);
   }, []);
