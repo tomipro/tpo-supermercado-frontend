@@ -71,35 +71,20 @@ export default function HomePage() {
       .catch(() => setCategories([]))
       .finally(() => setLoadingCategories(false));
   }, []);
-  // Promociones (puede ser endpoint propio, aquí ejemplo hardcodeado)
+  // Promociones: productos con descuento > 0
   useEffect(() => {
     setLoadingPromos(true);
-    setTimeout(() => {
-      setPromos([
-        {
-          img: "https://images.unsplash.com/photo-1502741338009-cac2772e18bc?auto=format&fit=crop&w=400&q=80",
-          title: "2x1 en Gaseosas",
-          desc: "Solo por esta semana, llevá 2 y pagá 1 en todas las gaseosas seleccionadas.",
-          cta: "Ver productos",
-          to: "/promociones",
-        },
-        {
-          img: "https://images.unsplash.com/photo-1519864600265-abb23847ef2c?auto=format&fit=crop&w=400&q=80",
-          title: "20% OFF en Frutas y Verduras",
-          desc: "Comé saludable con descuento en productos frescos.",
-          cta: "Comprar ahora",
-          to: "/categorias?cat=verduleria",
-        },
-        {
-          img: "https://images.unsplash.com/photo-1464306076886-debca5e8a6b0?auto=format&fit=crop&w=400&q=80",
-          title: "Envío gratis",
-          desc: "En compras mayores a $15.000, el envío es gratis a todo el país.",
-          cta: "Ver más",
-          to: "/",
-        },
-      ]);
-      setLoadingPromos(false);
-    }, 400); // Simula fetch
+    fetch("http://localhost:4040/producto")
+      .then((res) => res.json())
+      .then((prodData) => {
+        // Filtra productos con descuento > 0
+        const productosPromo = Array.isArray(prodData.content)
+          ? prodData.content.filter((p) => Number(p.descuento) > 0)
+          : [];
+        setPromos(productosPromo);
+      })
+      .catch(() => setPromos([]))
+      .finally(() => setLoadingPromos(false));
   }, []);
 
   // Productos destacados
@@ -550,13 +535,29 @@ export default function HomePage() {
         {loadingPromos ? (
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             {Array.from({ length: 3 }).map((_, i) => (
-              <SkeletonPromoCard key={i} />
+              <SkeletonProductCard key={i} />
             ))}
           </div>
+        ) : promos.length === 0 ? (
+          <div className="text-gray-500">No hay productos en promoción.</div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {promos.map((promo) => (
-              <PromotionsCard key={promo.title} {...promo} />
+          <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-8">
+            {promos.slice(0, 10).map((prod) => (
+              <ProductCardWithFallback
+                key={prod.id}
+                id={prod.id}
+                name={prod.nombre}
+                brand={prod.marca}
+                img={
+                  (Array.isArray(prod.imagenes) && prod.imagenes[0]) ||
+                  undefined
+                }
+                price={prod.precio}
+                weight={prod.unidadMedida}
+                offer={prod.descuento > 0 ? `${prod.descuento}% OFF` : undefined}
+                bestSeller={prod.bestSeller}
+                onQuickView={setQuickView}
+              />
             ))}
           </div>
         )}

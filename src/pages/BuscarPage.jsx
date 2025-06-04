@@ -276,7 +276,12 @@ export default function BuscarPage() {
       try {
         const res = await fetch("http://localhost:4040/categorias");
         const data = await res.json();
-        setCategoriasApi(Array.isArray(data.content) ? data.content : []);
+        // Solo categorías principales (parentId === null)
+        setCategoriasApi(
+          Array.isArray(data.content)
+            ? data.content.filter((cat) => cat.parentId === null)
+            : []
+        );
       } catch (err) {
         setCategoriasApi([]);
       }
