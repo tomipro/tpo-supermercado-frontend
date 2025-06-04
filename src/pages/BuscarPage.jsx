@@ -4,19 +4,6 @@ import ProductCard from "../components/ProductCard";
 import { useAuth } from "../auth/AuthProvider";
 import { useCart } from "../context/CartContext";
 
-// todo esto se  va cuando integramos backend.. osea hariamos un fetch de estas cosas
-
-const MARCAS = [
-  "La Serenísima",
-  "Bimbo",
-  "Coca-Cola",
-  "Pepsi",
-  "Sancor",
-  "Molinos",
-  "Arcor",
-  "Ala",
-  "Head & Shoulders",
-];
 
 const SORT_OPTIONS = [
   { value: "relevancia", label: "Relevancia" },
@@ -211,6 +198,7 @@ export default function BuscarPage() {
   const searchParam = useQueryParam("search");
   const [query, setQuery] = useState(searchParam);
   const [marcas, setMarcas] = useState([]);
+  const [marcasDisponibles, setMarcasDisponibles] = useState([]); // <-- NUEVO
   const [precioMin, setPrecioMin] = useState("");
   const [precioMax, setPrecioMax] = useState("");
   const [promo, setPromo] = useState(false);
@@ -277,7 +265,18 @@ export default function BuscarPage() {
         const res = await fetch(url);
         if (!res.ok) throw new Error("Error al cargar productos");
         const data = await res.json();
-        setProductos(Array.isArray(data.content) ? data.content : []);
+        const productosArr = Array.isArray(data.content) ? data.content : [];
+        setProductos(productosArr);
+
+        // Extrae marcas únicas de los productos
+        const marcasSet = new Set();
+        productosArr.forEach((p) => {
+          if (p.marca && typeof p.marca === "string" && p.marca.trim() !== "") {
+            marcasSet.add(p.marca.trim());
+          }
+        });
+        setMarcasDisponibles(Array.from(marcasSet).sort((a, b) => a.localeCompare(b)));
+
         setTotalPages(
           data.totalPages ||
             Math.ceil(
@@ -288,6 +287,7 @@ export default function BuscarPage() {
       } catch (err) {
         setError("No se pudieron cargar los productos.");
         setProductos([]);
+        setMarcasDisponibles([]); // <-- Limpia marcas si hay error
         setTotalPages(1);
         setTotalElements(0);
       } finally {
@@ -411,17 +411,21 @@ export default function BuscarPage() {
             <div>
               <label className="block text-sm font-medium mb-1">Marca</label>
               <div className="flex flex-col gap-1 max-h-32 overflow-y-auto">
-                {MARCAS.map((m) => (
-                  <label key={m} className="flex items-center gap-2 text-sm">
-                    <input
-                      type="checkbox"
-                      checked={marcas.includes(m)}
-                      onChange={() => handleMarcaChange(m)}
-                      className="rounded border-gray-300 text-primary focus:ring-primary"
-                    />
-                    {m}
-                  </label>
-                ))}
+                {marcasDisponibles.length === 0 ? (
+                  <span className="text-xs text-gray-400">No hay marcas</span>
+                ) : (
+                  marcasDisponibles.map((m) => (
+                    <label key={m} className="flex items-center gap-2 text-sm">
+                      <input
+                        type="checkbox"
+                        checked={marcas.includes(m)}
+                        onChange={() => handleMarcaChange(m)}
+                        className="rounded border-gray-300 text-primary focus:ring-primary"
+                      />
+                      {m}
+                    </label>
+                  ))
+                )}
               </div>
             </div>
             <div>
