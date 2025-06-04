@@ -324,15 +324,18 @@ export default function BuscarPage() {
     .map((sub) => ({ id: String(sub.id), nombre: sub.nombre }))
     .filter((v, i, arr) => arr.findIndex((x) => x.id === v.id) === i);
 
-  const productosFiltrados = [...productos].sort((a, b) => {
-    if (sortBy === "precio-asc") return a.precio - b.precio;
-    if (sortBy === "precio-desc") return b.precio - a.precio;
-    if (sortBy === "nombre-asc")
-      return (a.nombre || "").localeCompare(b.nombre || "");
-    if (sortBy === "nombre-desc")
-      return (b.nombre || "").localeCompare(a.nombre || "");
-    return 0;
-  });
+  // Solo productos con stock > 0
+  const productosFiltrados = [...productos]
+    .filter((p) => Number(p.stock) > 0)
+    .sort((a, b) => {
+      if (sortBy === "precio-asc") return a.precio - b.precio;
+      if (sortBy === "precio-desc") return b.precio - a.precio;
+      if (sortBy === "nombre-asc")
+        return (a.nombre || "").localeCompare(b.nombre || "");
+      if (sortBy === "nombre-desc")
+        return (b.nombre || "").localeCompare(a.nombre || "");
+      return 0;
+    });
 
   function handleMarcaChange(marca) {
     setMarcas((marcas) =>
