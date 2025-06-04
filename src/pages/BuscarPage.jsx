@@ -263,19 +263,8 @@ export default function BuscarPage() {
   // Si hay un ID de categoría en la URL, lo agregamos a los filtros
   useEffect(() => {
     if (categoriaIdParam && categoriasApi.length > 0) {
-      // Encontrá la categoría seleccionada
-      const categoriaSeleccionada = categoriasApi.find(
-        (cat) => String(cat.id) === String(categoriaIdParam)
-      );
-      if (categoriaSeleccionada) {
-        // Incluye los IDs de las subcategorías (si existen)
-        const subcatIds = (categoriaSeleccionada.subcategorias || []).map(
-          (sub) => String(sub.id)
-        );
-        setCategorias([String(categoriaIdParam), ...subcatIds]);
-      } else {
-        setCategorias([String(categoriaIdParam)]);
-      }
+      // Solo agregá el ID de la categoría principal
+      setCategorias([String(categoriaIdParam)]);
       setPage(0); // opcional: resetea la página al cambiar filtro
     }
     // Solo corre cuando cambian estos valores
@@ -306,7 +295,7 @@ export default function BuscarPage() {
         if (query) params.push(`nombre=${encodeURIComponent(query)}`);
         if (marcas.length > 0) params.push(`marca=${marcas.join(",")}`);
         if (categorias.length > 0)
-          params.push(`categoriaId=${categorias.join(",")}`);
+          params.push(`categoriaId=${categorias[0]}`); // Solo el primer ID
         if (subcategorias.length > 0)
           params.push(`subcategoriaId=${subcategorias.join(",")}`);
         if (promo) params.push(`oferta=true`);
