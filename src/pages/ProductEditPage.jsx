@@ -53,7 +53,19 @@ export default function ProductEditPage({ modo = "editar" }) {
           });
           if (res.ok) {
             const data = await res.json();
-            setProducto(data);
+            // Normaliza imágenes: siempre array de objetos { url }
+            const imagenesNormalizadas = Array.isArray(data.imagenes)
+              ? data.imagenes.map(img =>
+                  typeof img === "string"
+                    ? { url: img }
+                    : img && img.url
+                    ? { url: img.url }
+                    : img && img.imagen
+                    ? { url: img.imagen }
+                    : null
+                ).filter(Boolean)
+              : [];
+            setProducto({ ...data, imagenes: imagenesNormalizadas });
           } else {
             setError("No se pudo cargar el producto.");
           }
