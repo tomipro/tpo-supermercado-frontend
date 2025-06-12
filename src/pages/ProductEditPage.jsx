@@ -8,7 +8,7 @@ const PRODUCTO_VACIO = {
   imagenes: [],
   precio: 0,
   marca: "",
-  categoria_id: "",
+  categoria_id: 0,
   stock: 0,
   descuento: 0,
   stock_minimo: 0,
@@ -65,7 +65,28 @@ export default function ProductEditPage({ modo = "editar" }) {
                     : null
                 ).filter(Boolean)
               : [];
-            setProducto({ ...data, imagenes: imagenesNormalizadas });
+            let categoria_id = "";
+            if (data.categoria && categorias.length > 0) {
+              // Busca el id de la categoría por nombre
+              const cat = categorias.find(c => c.nombre === data.categoria);
+              categoria_id = cat ? cat.id : "";
+            }
+            setProducto({
+              ...data,
+              imagenes: imagenesNormalizadas,
+              categoria_id,
+              // Normalización de campos para evitar problemas de nombres
+              stock_minimo: data.stock_minimo ?? data.stockMinimo ?? 0,
+              unidad_medida: data.unidad_medida ?? data.unidadMedida ?? "",
+              ventas_totales: data.ventas_totales ?? data.ventasTotales ?? 0,
+              descuento: data.descuento ?? data.descuento ?? 0,
+              precio: data.precio ?? data.precio ?? 0,
+              stock: data.stock ?? data.stock ?? 0,
+              marca: data.marca ?? data.marca ?? "",
+              descripcion: data.descripcion ?? data.descripcion ?? "",
+              estado: data.estado ?? data.estado ?? "activo",
+              nombre: data.nombre ?? data.nombre ?? "",
+            });
           } else {
             setError("No se pudo cargar el producto.");
           }
@@ -76,6 +97,23 @@ export default function ProductEditPage({ modo = "editar" }) {
       fetchProducto();
     }
   }, [id, token, modo]);
+
+  useEffect(() => {
+    if (
+      producto &&
+      !producto.categoria_id &&
+      producto.categoria &&
+      categorias.length > 0
+    ) {
+      const cat = categorias.find((c) => c.nombre === producto.categoria);
+      if (cat) {
+        setProducto((prev) => ({
+          ...prev,
+          categoria_id: cat.id,
+        }));
+      }
+    }
+  }, [producto, categorias]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -239,7 +277,7 @@ export default function ProductEditPage({ modo = "editar" }) {
           <select
             className="input"
             name="categoria_id"
-            value={producto.categoria?.id || producto.categoria_id || ""}
+            value={producto.categoria_id || ""}
             onChange={handleChange}
             required
           >
