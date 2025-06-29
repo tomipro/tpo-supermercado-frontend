@@ -1,53 +1,29 @@
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../auth/AuthProvider";
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
+import { useSelector, useDispatch } from "react-redux";
 import CategoryAdminListCard from "../components/CategoryAdminListCard";
+import { fetchCategorias, deleteCategoria } from "../redux/categoriesSlice";
 
 export default function AdminPanelCategoriesPage() {
-    const { usuario, token } = useAuth();
-    const [categorias, setCategorias] = useState([]);
-    const [error, setError] = useState("");
-    const [success, setSuccess] = useState("");
-    const navigate = useNavigate();
+  const { token } = useAuth();
+  const dispatch = useDispatch();
+  const categoriasState = useSelector((state) => state.categorias);
+  const categorias = categoriasState.categorias;
+  const error = categoriasState.error;
+  const success = categoriasState.success;
+  const navigate = useNavigate();
 
   useEffect(() => {
-    async function fetchCategorias() {
-      try {
-            const res = await fetch("http://localhost:4040/categorias", {
-            headers: {
-                Authorization: `Bearer ${token}`,
-            },
-        });
-        if (res.ok) {
-          const data = await res.json();
-          setCategorias(data.content || data);
-        } else {
-          setError("No se pudieron cargar las categorías.");
-        }
-      } catch {
-        setError("Error de red al cargar categorías.");
-      }
-    }
-    fetchCategorias();
-  }, []);
+    dispatch(fetchCategorias());
+  }, [dispatch]);
 
   const handleEdit = (categoria) => {
     navigate(`/editar-categoria/${categoria.id}`);
   };
 
   const handleDelete = async (categoria) => {
-    const res = await fetch(`http://localhost:4040/categorias/${categoria.id}`, {
-      method: "DELETE",
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    });
-    if (res.ok) {
-      setSuccess("Categoría eliminada correctamente.");
-      setCategorias((prev) => prev.filter((c) => c.id !== categoria.id));
-    } else {
-      setError("No se pudo eliminar la categoría.");
-    }
+    dispatch(deleteCategoria({ id: categoria.id, token }));
   };
 
   const handleCreate = () => {

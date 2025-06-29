@@ -1,7 +1,8 @@
 import { Link, NavLink, useNavigate } from "react-router-dom";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { useAuth } from "../auth/AuthProvider";
-import { useSelector } from "react-redux";
+import { useSelector, useDispatch } from "react-redux";
+import { fetchCategorias } from "../redux/categoriesSlice";
 import DolarCotizacion from "../components/DolarCotizacion";
 import dinoLogo from "../assets/dino_logo.png";
 
@@ -13,13 +14,13 @@ export default function Navbar() {
   const [dropdown, setDropdown] = useState(null);
   const [mobileDropdown, setMobileDropdown] = useState(null);
   const [userDropdown, setUserDropdown] = useState(false);
-  const [categoriesDropdown, setCategoriesDropdown] = useState([
-    { name: "Ver todos", to: "/categorias" },
-  ]);
   const userDropdownRef = useRef(null);
   const { usuario, isAuthenticated, logout } = useAuth();
   const carrito = useSelector((state) => state.cart.carrito);
   const loading = useSelector((state) => state.cart.loading);
+  const categoriasState = useSelector((state) => state.categorias);
+  const categoriasRedux = categoriasState?.categorias || [];
+  const dispatch = useDispatch();
   const navigate = useNavigate();
   const totalItems = carrito?.items?.reduce(
     (sum, item) => sum + (item.cantidad || 0),
@@ -52,28 +53,24 @@ export default function Navbar() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [userDropdown]);
 
-  // Fetch categorías reales del backend para el dropdown
+  // Solo fetch una vez al montar
   useEffect(() => {
-    fetch("http://localhost:4040/categorias")
-      .then((res) => res.json())
-      .then((data) => {
-        const cats = Array.isArray(data.content)
-          ? // Filtra solo las que tienen parentId === null (principales)
-            data.content.filter((cat) => cat.parentId === null)
-          : [];
-        setCategoriesDropdown(
-          [{ name: "Ver todos", to: "/buscar" }].concat(
-            cats.map((cat) => ({
-              name: cat.nombre,
-              to: `/buscar?categoriaId=${cat.id}`,
-            }))
-          )
-        );
-      })
-      .catch(() => {
-        setCategoriesDropdown([{ name: "Ver todos", to: "/buscar" }]);
-      });
+    dispatch(fetchCategorias());
+    // eslint-disable-next-line
   }, []);
+
+  // Memoiza el dropdown para evitar loops y rerenders innecesarios
+  const categoriesDropdown = useMemo(() => {
+    const cats = Array.isArray(categoriasRedux)
+      ? categoriasRedux.filter((cat) => cat.parentId === null)
+      : [];
+    return [{ name: "Ver todos", to: "/buscar" }].concat(
+      cats.map((cat) => ({
+        name: cat.nombre,
+        to: `/buscar?categoriaId=${cat.id}`,
+      }))
+    );
+  }, [categoriasRedux]);
 
   // Solo reemplaza el dropdown de categorías en navLinks
   const navLinks = [

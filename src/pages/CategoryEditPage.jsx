@@ -2,6 +2,12 @@ import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useAuth } from "../auth/AuthProvider";
 import ProductAdminListCard from "../components/ProductAdminListCard";
+import { useSelector, useDispatch } from "react-redux";
+import {
+  fetchCategorias,
+  addCategoria,
+  editCategoria,
+} from "../redux/categoriesSlice";
 
 // Plantilla para nueva categoría
 const CATEGORIA_VACIA = {
@@ -15,6 +21,8 @@ export default function CategoryEditPage({ modo = "editar" }) {
   const { id } = useParams();
   const { token } = useAuth();
   const navigate = useNavigate();
+  const dispatch = useDispatch();
+  const categoriasRedux = useSelector((state) => state.categorias.categorias);
 
   // Estado principal
   const [categoria, setCategoria] = useState(
@@ -22,7 +30,6 @@ export default function CategoryEditPage({ modo = "editar" }) {
   );
   const [nombre, setNombre] = useState("");
   const [parentId, setParentId] = useState("");
-  const [allCategorias, setAllCategorias] = useState([]);
   const [subcategorias, setSubcategorias] = useState([]);
   const [selectedSubId, setSelectedSubId] = useState("");
   const [error, setError] = useState("");
@@ -45,23 +52,12 @@ export default function CategoryEditPage({ modo = "editar" }) {
       setError("No se pudo cargar la categoría.");
     }
   }
-  async function fetchAllCategorias() {
-    try {
-      const res = await fetch("http://localhost:4040/categorias", {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (res.ok) {
-        const data = await res.json();
-        setAllCategorias(data.content || data);
-      }
-    } catch {}
-  }
 
   // Carga inicial
   useEffect(() => {
+    dispatch(fetchCategorias());
     if (modo === "editar") fetchCategoria();
-    fetchAllCategorias();
-  }, [id, token, modo]);
+  }, [dispatch, id, token, modo]);
 
   // Handlers básicos
   const handleParentChange = (e) => setParentId(e.target.value);
@@ -70,12 +66,11 @@ export default function CategoryEditPage({ modo = "editar" }) {
   // Agregar subcategoría
   const handleAddSubcategoria = async () => {
     if (!selectedSubId) return;
-    const catToAdd = allCategorias.find((c) => c.id === selectedSubId);
+    const catToAdd = categoriasRedux.find((c) => c.id === selectedSubId);
     if (!catToAdd) return;
 
     if (modo === "crear") {
       setSubcategorias([...subcategorias, catToAdd]);
-      setAllCategorias(allCategorias.filter((c) => c.id !== catToAdd.id));
       setSelectedSubId("");
     } else {
       const res = await fetch(
@@ -95,7 +90,6 @@ export default function CategoryEditPage({ modo = "editar" }) {
       if (res.ok) {
         setSelectedSubId("");
         await fetchCategoria();
-        await fetchAllCategorias();
       }
     }
   };
@@ -104,7 +98,6 @@ export default function CategoryEditPage({ modo = "editar" }) {
   const handleRemoveSubcategoria = async (sub) => {
     if (modo === "crear") {
       setSubcategorias(subcategorias.filter((s) => s.id !== sub.id));
-      setAllCategorias([...allCategorias, sub]);
     } else {
       const res = await fetch(
         `http://localhost:4040/categorias/${sub.id}`,
@@ -122,7 +115,6 @@ export default function CategoryEditPage({ modo = "editar" }) {
       );
       if (res.ok) {
         await fetchCategoria();
-        await fetchAllCategorias();
       }
     }
   };
@@ -135,49 +127,15 @@ export default function CategoryEditPage({ modo = "editar" }) {
     try {
       let res;
       if (modo === "crear") {
-        res = await fetch("http://localhost:4040/categorias", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify({ nombre, parentId: parentId || null }),
-        });
-        if (res.ok) {
-          const createdCat = await res.json();
-          await Promise.all(
-            subcategorias.map((sub) =>
-              fetch(
-                `http://localhost:4040/categorias/${sub.id}`,
-                {
-                  method: "PUT",
-                  headers: {
-                    "Content-Type": "application/json",
-                    Authorization: `Bearer ${token}`,
-                  },
-                  body: JSON.stringify({
-                    nombre: sub.nombre,
-                    parentId: createdCat.id,
-                  }),
-                }
-              )
-            )
-          );
-        }
+        res = await dispatch(
+          addCategoria({ nombre, parentId: parentId || null, token })
+        );
       } else {
-        res = await fetch(
-          `http://localhost:4040/categorias/${id}`,
-          {
-            method: "PUT",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${token}`,
-            },
-            body: JSON.stringify({ nombre, parentId: parentId || null }),
-          }
+        res = await dispatch(
+          editCategoria({ id, nombre, parentId: parentId || null, token })
         );
       }
-      if (res.ok) {
+      if (res.meta.requestStatus === "fulfilled") {
         setSuccess(
           modo === "crear"
             ? "Categoría creada correctamente."
@@ -226,7 +184,7 @@ export default function CategoryEditPage({ modo = "editar" }) {
             onChange={handleParentChange}
           >
             <option value="">Sin categoría padre</option>
-            {allCategorias
+            {categoriasRedux
               .filter(
                 (c) => !c.parentCategoria && c.id !== categoria?.id
               )
