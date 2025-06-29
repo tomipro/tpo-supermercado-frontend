@@ -1,7 +1,8 @@
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { useAuth } from "../auth/AuthProvider";
-import { useCart } from "../context/CartContext";
+import { useDispatch } from "react-redux";
+import { fetchCarrito } from "../redux/cartSlice";
 import { motion, AnimatePresence } from "framer-motion";
 
 // Simulación de productos con más detalles
@@ -120,7 +121,7 @@ export default function ProductDetailPage() {
 	const { slug, id } = useParams();
 	const navigate = useNavigate();
 	const { token } = useAuth();
-	const { refreshCarrito } = useCart();
+	const dispatch = useDispatch();
 	const [product, setProduct] = useState(null);
 	const [mainImgIdx, setMainImgIdx] = useState(0);
 	const [qty, setQty] = useState(1);
@@ -275,7 +276,7 @@ export default function ProductDetailPage() {
 			});
 			if (res.ok) {
 				setAddCartMsg("Producto agregado al carrito.");
-				refreshCarrito();
+				await dispatch(fetchCarrito(token));
 				setUnits(units + qty);
 				setAdded(true);
 				setTimeout(() => setAdded(false), 1200);

@@ -2,7 +2,8 @@ import { useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
 import ProductCard from "../components/ProductCard";
 import { useAuth } from "../auth/AuthProvider";
-import { useCart } from "../context/CartContext";
+import { useDispatch } from "react-redux";
+import { fetchCarrito, patchCarrito } from "../redux/cartSlice";
 
 
 const SORT_OPTIONS = [
@@ -194,7 +195,7 @@ function useQueryParam(name) {
 export default function BuscarPage() {
   const categoriaIdParam = useQueryParam("categoriaId");
   const { token } = useAuth();
-  const { refreshCarrito } = useCart();
+  const dispatch = useDispatch();
   const searchParam = useQueryParam("search");
   const [query, setQuery] = useState(searchParam);
   const [marcas, setMarcas] = useState([]);
@@ -365,14 +366,8 @@ export default function BuscarPage() {
 
   async function handleAddToCart(id, cantidad) {
     try {
-      await fetch(`http://localhost:4040/carritos/${id}?cantidad=${cantidad}`, {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-      });
-      refreshCarrito();
+      await dispatch(patchCarrito({ token, productoId: id, cantidad }));
+      await dispatch(fetchCarrito(token));
     } catch {}
   }
 

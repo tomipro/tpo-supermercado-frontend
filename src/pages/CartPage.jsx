@@ -4,7 +4,13 @@ import { Link, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { FaTrash, FaPlus, FaMinus, FaShoppingCart } from "react-icons/fa";
 import dinoPensativo from "../assets/dino_pensativo.png";
-import { useCart } from "../context/CartContext";
+import { useSelector, useDispatch } from "react-redux";
+import {
+  fetchCarrito,
+  patchCarrito,
+  deleteCarrito,
+  deleteAllCarrito,
+} from "../redux/cartSlice";
 
 // Muestra un mensaje  y imagen del dino cuando el carrito está vacío
 function CarritoVacio() {
@@ -54,17 +60,19 @@ function CarritoVacio() {
 
 // Página principal del carrito
 export default function CartPage() {
-  // Estado principal del carrito y su carga
-  const { carrito, setCarrito, loading, error, refreshCarrito } = useCart();
+  // const { carrito, setCarrito, loading, error, refreshCarrito } = useCart();
+  const carrito = useSelector((state) => state.cart.carrito);
+  const loading = useSelector((state) => state.cart.loading);
+  const error = useSelector((state) => state.cart.error);
+  const dispatch = useDispatch();
   const [imagenesProductos, setImagenesProductos] = useState({});
   const { token } = useAuth();
   const navigate = useNavigate();
 
-  // Trae el carrito al cargar la página o cuando cambia el token
   useEffect(() => {
-    refreshCarrito();
+    if (token) dispatch(fetchCarrito(token));
     // eslint-disable-next-line
-  }, [token]);
+  }, [token, dispatch]);
 
   // Trae imágenes de los productos del carrito (si hace falta)
   useEffect(() => {
@@ -91,41 +99,20 @@ export default function CartPage() {
   // Disminuye cantidad o elimina si queda solo uno
   const handleDecrement = async (item) => {
     try {
-      const res = await fetch(
-        `http://localhost:4040/carritos/${item.productoId}`,
-        {
-          method: "DELETE",
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
-      if (!res.ok) throw new Error("No se pudo eliminar/restar el producto.");
-      await res.json();
-      await refreshCarrito(); // Espera a que el contexto se actualice antes de continuar
+      await dispatch(deleteCarrito({ token, productoId: item.productoId }));
+      await dispatch(fetchCarrito(token));
     } catch (e) {
-      setError("No se pudo eliminar/restar el producto. Intenta de nuevo.");
+      // Manejo de error por redux
     }
   };
 
   // Cambia la cantidad de un producto en el carrito (+1)
   const handleChangeCantidad = async (productoId, change) => {
     try {
-      const res = await fetch(
-        `http://localhost:4040/carritos/${productoId}?cantidad=${change}`,
-        {
-          method: "PATCH",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
-      if (!res.ok) throw new Error("No se pudo modificar la cantidad.");
-      await res.json();
-      await refreshCarrito();
+      await dispatch(patchCarrito({ token, productoId, cantidad: change }));
+      await dispatch(fetchCarrito(token));
     } catch (e) {
-      setError("No se pudo modificar la cantidad. Intenta de nuevo.");
+      // Manejo de error por redux
     }
   };
 
@@ -134,20 +121,10 @@ export default function CartPage() {
     const item = carrito.items.find((i) => i.productoId === productoId);
     const cantidadAEliminar = item ? item.cantidad : 1;
     try {
-      const res = await fetch(
-        `http://localhost:4040/carritos/${productoId}?cantidad=${cantidadAEliminar}`,
-        {
-          method: "DELETE",
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
-      if (!res.ok) throw new Error("No se pudo eliminar el producto.");
-      await res.json();
-      await refreshCarrito();
+      await dispatch(deleteAllCarrito({ token, productoId, cantidad: cantidadAEliminar }));
+      await dispatch(fetchCarrito(token));
     } catch (e) {
-      setError("No se pudo eliminar el producto. Intenta de nuevo.");
+      // Manejo de error por redux
     }
   };
 

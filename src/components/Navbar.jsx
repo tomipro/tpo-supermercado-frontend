@@ -1,7 +1,7 @@
 import { Link, NavLink, useNavigate } from "react-router-dom";
 import { useState, useEffect, useRef } from "react";
 import { useAuth } from "../auth/AuthProvider";
-import { useCart } from "../context/CartContext";
+import { useSelector } from "react-redux";
 import DolarCotizacion from "../components/DolarCotizacion";
 import dinoLogo from "../assets/dino_logo.png";
 
@@ -18,7 +18,8 @@ export default function Navbar() {
   ]);
   const userDropdownRef = useRef(null);
   const { usuario, isAuthenticated, logout } = useAuth();
-  const { carrito, loading } = useCart();
+  const carrito = useSelector((state) => state.cart.carrito);
+  const loading = useSelector((state) => state.cart.loading);
   const navigate = useNavigate();
   const totalItems = carrito?.items?.reduce(
     (sum, item) => sum + (item.cantidad || 0),

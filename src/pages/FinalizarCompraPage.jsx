@@ -4,12 +4,14 @@ import StepEntrega from "./StepEntrega";
 import StepPago from "./StepPago";
 import StepComprobante from "./StepComprobante";
 import { AnimatePresence } from "framer-motion";
-import { useCart } from "../context/CartContext";
+import { useSelector, useDispatch } from "react-redux";
+import { fetchCarrito } from "../redux/cartSlice";
 
 export default function FinalizarCompraPage() {
   // Hook de autenticación, trae el token del usuario logueado
   const { token } = useAuth();
-  const { refreshCarrito } = useCart();
+  const dispatch = useDispatch();
+  const carrito = useSelector((state) => state.cart.carrito);
 
   // Estados principales del flujo de compra
   const [direcciones, setDirecciones] = useState([]); // Direcciones guardadas del usuario
@@ -25,7 +27,6 @@ export default function FinalizarCompraPage() {
   const [msg, setMsg] = useState(""); // Mensaje de éxito
   const [error, setError] = useState(""); // Mensaje de error
   const [orden, setOrden] = useState(null); // Orden generada al finalizar compra
-  const [carrito, setCarrito] = useState(null); // Carrito actual del usuario
   const [imagenesProductos, setImagenesProductos] = useState({}); // Imagen de cada producto del carrito
   const [step, setStep] = useState(1); // Step actual del flujo (1: entrega, 2: pago, 3: comprobante)
   const [cancelTimeout, setCancelTimeout] = useState(null); // Permite cancelar el pago mientras está "procesando"
@@ -46,13 +47,9 @@ export default function FinalizarCompraPage() {
    * Carga el carrito del usuario logueado al cargar el componente o si cambia el token.
    */
   useEffect(() => {
-    fetch("http://localhost:4040/carritos", {
-      headers: { Authorization: `Bearer ${token}` },
-    })
-      .then((res) => res.json())
-      .then((data) => setCarrito(data))
-      .catch(() => setCarrito(null));
-  }, [token]);
+    if (token) dispatch(fetchCarrito(token));
+    // eslint-disable-next-line
+  }, [token, dispatch]);
 
   /**
    * Por cada producto del carrito, obtiene la imagen (si no la tiene ya) para mostrar en el resumen.
@@ -164,7 +161,7 @@ export default function FinalizarCompraPage() {
 
         setMsg("¡Compra realizada con éxito!");
         setStep(3);
-        await refreshCarrito();
+        await dispatch(fetchCarrito(token));
       } catch (e) {
         setError(e.message || "Error en el pago");
       } finally {
