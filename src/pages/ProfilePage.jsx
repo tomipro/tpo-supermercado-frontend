@@ -1,100 +1,74 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "../auth/AuthProvider";
+import { useSelector, useDispatch } from "react-redux";
+import {
+  fetchPerfil,
+  updatePerfil,
+  clearUsuarioMsg,
+} from "../redux/usuarioSlice";
 import { useNavigate } from "react-router-dom";
 import formatearFecha from "./formatearFecha.jsx";
 
 export default function ProfilePage() {
-  const { usuario, token, logout, login } = useAuth();
-  const [perfil, setPerfil] = useState(null);
-  const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
+  const { token, usuario, logout } = useAuth();
+  const dispatch = useDispatch();
+  const navigate = useNavigate();
+  const usuarioState = useSelector((state) => state.usuario);
+  const perfil = usuarioState?.perfil;
+  const loading = usuarioState?.loading;
+  const error = usuarioState?.error;
+  const success = usuarioState?.success;
+
   const [editando, setEditando] = useState(false);
   const [formData, setFormData] = useState({
     email: "",
     nombre: "",
     apellido: "",
   });
-  const navigate = useNavigate();
 
   useEffect(() => {
-    async function fetchPerfil() {
-      if (!token) return;
-      try {
-        const res = await fetch("http://localhost:4040/usuarios/me", {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
-        if (res.ok) {
-          const data = await res.json();
-          setPerfil(data);
-          setFormData({
-            email: data.email,
-            nombre: data.nombre,
-            apellido: data.apellido,
-          });
-        } else {
-          let mensaje = "Ocurrió un error al cargar el perfil.";
-          try {
-            const errorJson = await res.json();
-            mensaje = errorJson.mensaje || mensaje;
-          } catch {
-            try {
-              const errorText = await res.text();
-              if (errorText) mensaje = errorText;
-            } catch {}
-          }
-          setError(mensaje);
-        }
-      } catch (e) {
-        setError(e.message || "Error de red.");
-      }
+    if (token && usuario && usuario.id) {
+      dispatch(fetchPerfil({ token, id: usuario.id }));
     }
-    fetchPerfil();
-  }, [token]);
+    // eslint-disable-next-line
+  }, [token, usuario]);
+
+  useEffect(() => {
+    if (perfil) {
+      setFormData({
+        email: perfil.email || "",
+        nombre: perfil.nombre || "",
+        apellido: perfil.apellido || "",
+      });
+    }
+  }, [perfil]);
+
+  useEffect(() => {
+    if (success || error) {
+      const timer = setTimeout(() => dispatch(clearUsuarioMsg()), 2000);
+      return () => clearTimeout(timer);
+    }
+  }, [success, error, dispatch]);
 
   async function handleGuardar(e) {
     e.preventDefault();
-    setError("");
-    setSuccess("");
-    if (!perfil?.id) {
-      setError("No se encontró el ID del usuario.");
-      return;
-    }
-    try {
-      const res = await fetch(`http://localhost:4040/usuarios/${perfil.id}`, {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          email: formData.email,
-          nombre: formData.nombre,
-          apellido: formData.apellido,
-        }),
-      });
-      if (res.ok) {
-        const updated = await res.json();
-        setPerfil(updated);
-        setSuccess("Perfil actualizado correctamente.");
-        setEditando(false);
-        // Actualizar usuario global (navbar, etc)
-        login({ jwt: token, usuario: updated });
-      } else {
-        let mensaje = "Error al actualizar el perfil.";
-        try {
-          const data = await res.json();
-          mensaje = data.mensaje || mensaje;
-        } catch {
-          const text = await res.text();
-          if (text) mensaje = text;
-        }
-        setError(mensaje);
-      }
-    } catch (e) {
-      setError(e.message || "Error de red.");
-    }
+    await dispatch(updatePerfil({ token, formData }));
+    setEditando(false);
+  }
+
+  if (!perfil || loading) {
+    return <div className="mt-10 text-center">Cargando perfil...</div>;
+  }
+
+  if ((!perfil && !loading) || (error && !perfil)) {
+    return (
+      <div className="mt-10 text-center text-red-600">
+        {error || "No se pudo cargar el perfil."}
+        <button className="ml-4 underline" onClick={logout}>
+          Volver a iniciar sesión
+        </button>
+      </div>
+    );
   }
 
   return (
@@ -111,22 +85,15 @@ export default function ProfilePage() {
     >
       <div className="max-w-md w-full p-8 bg-white bg-opacity-95 rounded-xl shadow-lg z-10 backdrop-blur-[2px]">
         <h2 className="text-2xl font-bold mb-6 text-blue-700">Mi Perfil</h2>
-        {error && (
-          <div className="bg-red-100 text-red-700 p-2 rounded mb-4">
-            {error}
-          </div>
-        )}
-        {!perfil ? (
-          <div className="text-center text-gray-500 py-8">
-            Cargando perfil...
-          </div>
-        ) : !editando ? (
+        {success && <div className="text-green-600 mb-2">{success}</div>}
+        {error && <div className="text-red-600 mb-2">{error}</div>}
+        {!editando ? (
           <div>
             <div className="mb-4">
               <span className="block text-gray-600 font-semibold">
                 Usuario:
               </span>
-              <span className="block text-lg">{perfil.username}</span>
+              <span className="block text-lg">{perfil?.username}</span>
             </div>
             <div className="mb-4">
               <span className="block text-gray-600 font-semibold">Email:</span>
@@ -156,79 +123,61 @@ export default function ProfilePage() {
             >
               Editar perfil
             </button>
-            {success && (
-              <div className="bg-green-100 text-green-700 p-2 rounded mt-2">
-                {success}
-              </div>
-            )}
           </div>
         ) : (
-          <form onSubmit={handleGuardar} className="flex flex-col gap-3">
-            <label>
-              <span className="text-gray-600 font-semibold">Email:</span>
-              <input
-                type="email"
-                value={formData.email}
-                onChange={(e) =>
-                  setFormData({ ...formData, email: e.target.value })
-                }
-                className="w-full border p-2 rounded mt-1"
-                required
-              />
-            </label>
-            <label>
-              <span className="text-gray-600 font-semibold">Nombre:</span>
+          <form onSubmit={handleGuardar} className="flex flex-col gap-4">
+            <div>
+              <label className="block font-semibold mb-1">Nombre</label>
               <input
                 type="text"
                 value={formData.nombre}
                 onChange={(e) =>
-                  setFormData({ ...formData, nombre: e.target.value })
+                  setFormData((f) => ({ ...f, nombre: e.target.value }))
                 }
-                className="w-full border p-2 rounded mt-1"
+                className="w-full border rounded px-3 py-2"
                 required
               />
-            </label>
-            <label>
-              <span className="text-gray-600 font-semibold">Apellido:</span>
+            </div>
+            <div>
+              <label className="block font-semibold mb-1">Apellido</label>
               <input
                 type="text"
                 value={formData.apellido}
                 onChange={(e) =>
-                  setFormData({ ...formData, apellido: e.target.value })
+                  setFormData((f) => ({ ...f, apellido: e.target.value }))
                 }
-                className="w-full border p-2 rounded mt-1"
+                className="w-full border rounded px-3 py-2"
                 required
               />
-            </label>
-            <div className="flex gap-3 mt-2">
+            </div>
+            <div>
+              <label className="block font-semibold mb-1">Email</label>
+              <input
+                type="email"
+                value={formData.email}
+                onChange={(e) =>
+                  setFormData((f) => ({ ...f, email: e.target.value }))
+                }
+                className="w-full border rounded px-3 py-2"
+                required
+              />
+            </div>
+            <div className="flex gap-2">
               <button
                 type="submit"
-                className="bg-blue-600 text-white py-2 px-6 rounded font-semibold hover:bg-blue-700 transition"
+                className="bg-primary text-white px-4 py-2 rounded font-semibold hover:bg-blue-700 transition"
+                disabled={loading}
               >
                 Guardar cambios
               </button>
               <button
                 type="button"
-                className="bg-gray-200 text-gray-700 py-2 px-6 rounded font-semibold"
-                onClick={() => {
-                  setEditando(false);
-                  setFormData({
-                    email: perfil.email,
-                    nombre: perfil.nombre,
-                    apellido: perfil.apellido,
-                  });
-                  setError("");
-                  setSuccess("");
-                }}
+                className="bg-gray-200 text-gray-700 px-4 py-2 rounded font-semibold hover:bg-gray-300 transition"
+                onClick={() => setEditando(false)}
               >
                 Cancelar
               </button>
             </div>
-            {error && (
-              <div className="bg-red-100 text-red-700 p-2 rounded mt-2">
-                {error}
-              </div>
-            )}
           </form>
         )}
         <div className="mt-6">
