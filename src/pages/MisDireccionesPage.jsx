@@ -1,11 +1,22 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "../auth/AuthProvider";
+import { useSelector, useDispatch } from "react-redux";
+import {
+  fetchDirecciones,
+  saveDireccion,
+  deleteDireccion,
+  clearDireccionesMsg,
+} from "../redux/direccionesSlice";
 
 export default function MisDireccionesPage() {
   const { token } = useAuth();
-  const [direcciones, setDirecciones] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
+  const dispatch = useDispatch();
+  const direccionesState = useSelector((state) => state.direcciones);
+  const direcciones = direccionesState?.direcciones || [];
+  const loading = direccionesState?.loading;
+  const error = direccionesState?.error;
+  const success = direccionesState?.success;
+
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({
     calle: "",
@@ -16,41 +27,27 @@ export default function MisDireccionesPage() {
     codigoPostal: "",
     tipoVivienda: "casa",
   });
-  const [formError, setFormError] = useState("");
-  const [formLoading, setFormLoading] = useState(false);
   const [editId, setEditId] = useState(null);
 
   useEffect(() => {
-    fetchDirecciones();
+    if (token) dispatch(fetchDirecciones(token));
     // eslint-disable-next-line
-  }, []);
+  }, [token]);
 
-  function fetchDirecciones() {
-    setLoading(true);
-    setError("");
-    fetch("http://localhost:4040/direcciones", {
-      headers: { Authorization: `Bearer ${token}` },
-      credentials: "include",
-    })
-      .then((res) => {
-        if (!res.ok) throw new Error("No se pudieron cargar las direcciones.");
-        return res.json();
-      })
-      .then((data) => setDirecciones(Array.isArray(data) ? data : []))
-      .catch((err) => setError(err.message || "Error al cargar direcciones."))
-      .finally(() => setLoading(false));
-  }
+  useEffect(() => {
+    if (success || error) {
+      const timer = setTimeout(() => dispatch(clearDireccionesMsg()), 2000);
+      return () => clearTimeout(timer);
+    }
+  }, [success, error, dispatch]);
 
   const handleFormChange = (e) => {
     const { name, value } = e.target;
     setForm((f) => ({ ...f, [name]: value }));
-    setFormError("");
   };
 
   const handleFormSubmit = async (e) => {
     e.preventDefault();
-    setFormError("");
-    setFormLoading(true);
     if (
       !form.calle ||
       !form.numero ||
@@ -59,60 +56,34 @@ export default function MisDireccionesPage() {
       !form.codigoPostal ||
       !form.tipoVivienda
     ) {
-      setFormError("Completá todos los campos obligatorios.");
-      setFormLoading(false);
       return;
     }
-    try {
-      const url = editId
-        ? `http://localhost:4040/direcciones/${editId}`
-        : "http://localhost:4040/direcciones";
-      const method = editId ? "PUT" : "POST";
-      const res = await fetch(url, {
-        method,
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        credentials: "include",
-        body: JSON.stringify({
+    await dispatch(
+      saveDireccion({
+        token,
+        direccion: {
           ...form,
           pisoDepto: form.tipoVivienda === "departamento" ? form.pisoDepto : "",
-        }),
-      });
-      if (!res.ok) throw new Error(editId ? "No se pudo modificar la dirección." : "No se pudo crear la dirección.");
-      setShowForm(false);
-      setEditId(null);
-      setForm({
-        calle: "",
-        numero: "",
-        pisoDepto: "",
-        ciudad: "",
-        provincia: "",
-        codigoPostal: "",
-        tipoVivienda: "casa",
-      });
-      fetchDirecciones();
-    } catch (err) {
-      setFormError(err.message || "Error al guardar dirección.");
-    } finally {
-      setFormLoading(false);
-    }
+        },
+        editId,
+      })
+    );
+    setShowForm(false);
+    setEditId(null);
+    setForm({
+      calle: "",
+      numero: "",
+      pisoDepto: "",
+      ciudad: "",
+      provincia: "",
+      codigoPostal: "",
+      tipoVivienda: "casa",
+    });
   };
 
   const handleDelete = async (id) => {
     if (!window.confirm("¿Seguro que querés eliminar esta dirección?")) return;
-    try {
-      const res = await fetch(`http://localhost:4040/direcciones/${id}`, {
-        method: "DELETE",
-        headers: { Authorization: `Bearer ${token}` },
-        credentials: "include",
-      });
-      if (!res.ok) throw new Error("No se pudo eliminar la dirección.");
-      fetchDirecciones();
-    } catch (err) {
-      setError(err.message || "Error al eliminar dirección.");
-    }
+    await dispatch(deleteDireccion({ token, id }));
   };
 
   const handleEdit = (dir) => {
@@ -127,7 +98,6 @@ export default function MisDireccionesPage() {
     });
     setEditId(dir.id);
     setShowForm(true);
-    setFormError("");
   };
 
   const handleCancelForm = () => {
@@ -142,7 +112,6 @@ export default function MisDireccionesPage() {
       codigoPostal: "",
       tipoVivienda: "casa",
     });
-    setFormError("");
   };
 
   return (
@@ -166,7 +135,6 @@ export default function MisDireccionesPage() {
                 codigoPostal: "",
                 tipoVivienda: "casa",
               });
-              setFormError("");
             }
           }}
         >
@@ -273,18 +241,13 @@ export default function MisDireccionesPage() {
               </div>
             )}
           </div>
-          {formError && (
-            <div className="text-red-600 text-sm">{formError}</div>
-          )}
           <div className="flex justify-end">
             <button
               type="submit"
               className="bg-primary text-white px-4 py-2 rounded font-semibold hover:bg-blue-700 transition"
-              disabled={formLoading}
+              disabled={loading}
             >
-              {formLoading
-                ? (editId ? "Guardando cambios..." : "Guardando...")
-                : (editId ? "Guardar cambios" : "Guardar dirección")}
+              {editId ? "Guardar cambios" : "Guardar dirección"}
             </button>
           </div>
         </form>
@@ -335,6 +298,11 @@ export default function MisDireccionesPage() {
               </div>
             </div>
           ))}
+        </div>
+      )}
+      {(success || error) && (
+        <div className={`mt-4 text-center ${success ? "text-green-600" : "text-red-600"}`}>
+          {success || error}
         </div>
       )}
     </div>
