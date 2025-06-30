@@ -1,177 +1,138 @@
 import { Link } from "react-router-dom";
 import { useState, useEffect } from "react";
 import ProductCard from "../components/ProductCard";
-import { useAuth } from "../auth/AuthProvider";
 import promoBannerImg from "../assets/banner2.jpeg";
 import promoBannerImg2 from "../assets/banner3.jpg";
 import promoBannerImg4 from "../assets/banner4.webp";
 import { useDispatch, useSelector } from "react-redux";
 import { fetchProductos } from "../redux/productosSlice";
+import { fetchCategorias } from "../redux/categoriesSlice";
+import { patchCarrito, fetchCarrito } from "../redux/cartSlice";
 
 const FALLBACK_IMG = "https://cdn-icons-png.flaticon.com/512/1046/1046857.png";
 
 export default function HomePage() {
-  const { token } = useAuth();
   const dispatch = useDispatch();
-  const productosDestacados = useSelector((state) => state.productos.productos);
-  const loadingDestacados = useSelector((state) => state.productos.loading);
-  const errorDestacados = useSelector((state) => state.productos.error);
+  const token = useSelector((state) => state.auth.token);
+  // Redux state
+  const productos = useSelector((state) => state.productos.productos);
+  const loadingProductos = useSelector((state) => state.productos.loading);
+  const categorias = useSelector((state) => state.categorias.categorias);
+  const loadingCategories = useSelector((state) => state.categorias.loading);
 
+  // UI state
   const [quickView, setQuickView] = useState(null);
   const [banners, setBanners] = useState([]);
-  const [categories, setCategories] = useState([]);
-  const [promos, setPromos] = useState([]);
-  const [destacados, setDestacados] = useState([]);
-  const [loadingCategories, setLoadingCategories] = useState(true);
-  const [loadingPromos, setLoadingPromos] = useState(true);
   const [addCartLoading, setAddCartLoading] = useState(false);
-  const [showAllCategories, setShowAllCategories] = useState(false);
   const [catPage, setCatPage] = useState(0);
-  const categoriesPerPage = 8;
-
   const [prodPage, setProdPage] = useState(0);
+
+  const categoriesPerPage = 8;
   const productsPerPage = 6;
 
+  // Banners (solo inicializa una vez)
   useEffect(() => {
     setBanners([
       {
-        img: promoBannerImg, // usa la imagen local
+        img: promoBannerImg,
         title: "¡Super Ofertas de la Semana!",
-        desc: "Encontra descuentos exclusivos en cientos de productos filtrando por \"En promocion\".",
+        desc: 'Encontra descuentos exclusivos en cientos de productos filtrando por "En promoción".',
         cta: "Explorar promociones",
         to: "/buscar",
       },
-      {
-        img: promoBannerImg2
-      },
-      {
-        img: promoBannerImg4,
-      },
+      { img: promoBannerImg2 },
+      { img: promoBannerImg4 },
     ]);
   }, []);
 
-  // Categorías
+  // Cargar categorías al montar
   useEffect(() => {
-    setLoadingCategories(true);
-    fetch("http://localhost:4040/categorias")
-      .then((res) => res.json())
-      .then((catData) => {
-        setCategories(
-          Array.isArray(catData.content)
-            ? catData.content.map((c) => ({
-                name: c.nombre,
-                to: `/buscar?categoriaId=${c.id}`,
-                img:
-                  (c.productos && c.productos[0]?.imagenes?.[0]?.imagen) ||
-                  FALLBACK_IMG,
-              }))
-            : []
-        );
-      })
-      .catch(() => setCategories([]))
-      .finally(() => setLoadingCategories(false));
-  }, []);
-  // Promociones: productos con descuento > 0
-  useEffect(() => {
-    setLoadingPromos(true);
-    fetch("http://localhost:4040/producto")
-      .then((res) => res.json())
-      .then((prodData) => {
-        // Filtra productos con descuento > 0
-        const productosPromo = Array.isArray(prodData.content)
-          ? prodData.content.filter((p) => Number(p.descuento) > 0)
-          : [];
-        setPromos(productosPromo);
-      })
-      .catch(() => setPromos([]))
-      .finally(() => setLoadingPromos(false));
-  }, []);
+    dispatch(fetchCategorias());
+  }, [dispatch]);
 
-  // Productos destacados
+  // Cargar productos destacados al montar
   useEffect(() => {
     dispatch(fetchProductos({ destacados: true }));
     // eslint-disable-next-line
   }, []);
 
-  async function handleAddToCart(id, cantidad) {
+  // Mapear categorías
+  const categoriesMapped = Array.isArray(categorias)
+    ? categorias.map((c) => ({
+        name: c.nombre,
+        to: `/buscar?categoriaId=${c.id}`,
+        img:
+          (c.productos && c.productos[0]?.imagenes?.[0]?.imagen) ||
+          FALLBACK_IMG,
+      }))
+    : [];
+
+  // Mapear productos destacados
+  const productosDestacados = productos || [];
+
+  // Mapear promociones: productos con descuento > 0
+  const promosMapped = Array.isArray(productos)
+    ? productos
+        .filter((p) => Number(p.descuento) > 0)
+        .map((p) => ({
+          id: p.id,
+          name: p.nombre,
+          brand: p.marca,
+          img:
+            (Array.isArray(p.imagenes) && p.imagenes[0]?.imagen) ||
+            (Array.isArray(p.imagenes) &&
+              typeof p.imagenes[0] === "string" &&
+              p.imagenes[0]) ||
+            FALLBACK_IMG,
+          price: p.precio,
+          weight: p.unidadMedida,
+          offer: p.descuento > 0 ? `${p.descuento}% OFF` : undefined,
+          bestSeller: p.bestSeller,
+          onQuickView: () => handleQuickView(p.id),
+        }))
+    : [];
+
+  // Handler global para QuickView: busca SIEMPRE en Redux
+  const handleQuickView = (id) => {
+    const prod =
+      productosDestacados.find((p) => p.id === id) ||
+      productos.find((p) => p.id === id);
+    if (prod) setQuickView(prod);
+  };
+
+  // Handler para agregar al carrito
+  const handleAddToCart = async (id, cantidad) => {
     setAddCartLoading(true);
     try {
-      await fetch(`http://localhost:4040/carritos/${id}?cantidad=${cantidad}`, {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-      });
-      // Podrías mostrar un toast o feedback aquí si quieres
+      await dispatch(patchCarrito({ token, productoId: id, cantidad }));
+      await dispatch(fetchCarrito(token));
     } catch {}
     setAddCartLoading(false);
-  }
+  };
 
+  // Card wrapper: usa SIEMPRE info de Redux y props
   function ProductCardWithFallback(props) {
-    const [imgSrc, setImgSrc] = useState(props.img || FALLBACK_IMG);
     const [units, setUnits] = useState(0);
     const [added, setAdded] = useState(false);
     const [loading, setLoading] = useState(false);
-    const [productData, setProductData] = useState(null);
 
-    // Fetch full product data for quick view
-    useEffect(() => {
-      if (!props.id) return;
-      fetch(`http://localhost:4040/producto/id/${props.id}`)
-        .then((res) => (res.ok ? res.json() : null))
-        .then((data) => setProductData(data))
-        .catch(() => setProductData(null));
-    }, [props.id]);
-
-    const handleAddToCart = async (id, cantidad) => {
+    const handleAddToCartLocal = async (id, cantidad) => {
       setLoading(true);
-      await handleAddCart(id, cantidad);
+      await handleAddToCart(id, cantidad);
       setUnits(units + cantidad);
       setAdded(true);
       setLoading(false);
       setTimeout(() => setAdded(false), 1200);
     };
 
-    const handleAddCart = async (id, cantidad) => {
-      try {
-        await fetch(
-          `http://localhost:4040/carritos/${id}?cantidad=${cantidad}`,
-          {
-            method: "PATCH",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${token}`,
-            },
-          }
-        );
-      } catch {}
-    };
-
-    // QuickView handler: pasa el producto completo si lo tiene, si no, pasa los props mínimos
-    const handleQuickView = (prod) => {
-      if (productData) {
-        setQuickView(productData);
-      } else {
-        setQuickView({
-          id: props.id,
-          nombre: props.name,
-          marca: props.brand,
-          precio: props.price,
-          imagenes: [{ imagen: imgSrc }],
-          ...props,
-        });
-      }
-    };
-
     return (
       <ProductCard
         {...props}
-        img={imgSrc}
+        img={props.img}
         onErrorImg={FALLBACK_IMG}
-        onQuickView={handleQuickView}
+        onQuickView={props.onQuickView}
         showSinImpuestos={true}
-        onAddToCart={handleAddToCart}
+        onAddToCart={handleAddToCartLocal}
       />
     );
   }
@@ -219,35 +180,34 @@ export default function HomePage() {
               {cta}
             </Link>
           )}
-        </div>
-        <button
-          onClick={prev}
-          className="absolute left-2 top-1/2 -translate-y-1/2 bg-white/70 hover:bg-white text-primary rounded-full w-9 h-9 flex items-center justify-center shadow transition"
-        >
-          <span className="text-2xl">&#8592;</span>
-        </button>
-        <button
-          onClick={next}
-          className="absolute right-2 top-1/2 -translate-y-1/2 bg-white/70 hover:bg-white text-primary rounded-full w-9 h-9 flex items-center justify-center shadow transition"
-        >
-          <span className="text-2xl">&#8594;</span>
-        </button>
-        <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-2">
-          {banners.map((_, i) => (
-            <span
-              key={i}
-              className={`block w-3 h-3 rounded-full ${
-                i === idx ? "bg-accent" : "bg-white/60"
-              }`}
-            ></span>
-          ))}
+          <button
+            onClick={prev}
+            className="absolute left-2 top-1/2 -translate-y-1/2 bg-white/70 hover:bg-white text-primary rounded-full w-9 h-9 flex items-center justify-center shadow transition"
+          >
+            <span className="text-2xl">&#8592;</span>
+          </button>
+          <button
+            onClick={next}
+            className="absolute right-2 top-1/2 -translate-y-1/2 bg-white/70 hover:bg-white text-primary rounded-full w-9 h-9 flex items-center justify-center shadow transition"
+          >
+            <span className="text-2xl">&#8594;</span>
+          </button>
+          <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-2">
+            {banners.map((_, i) => (
+              <span
+                key={i}
+                className={`block w-3 h-3 rounded-full ${
+                  i === idx ? "bg-accent" : "bg-white/60"
+                }`}
+              ></span>
+            ))}
+          </div>
         </div>
       </div>
     );
   }
 
   function CategoryCard({ name, img, to }) {
-    // Mostramos la inicial grande en vez de imagen
     const initial = name?.[0]?.toUpperCase() || "?";
     return (
       <Link
@@ -274,31 +234,6 @@ export default function HomePage() {
           {name}
         </span>
       </Link>
-    );
-  }
-
-  function PromotionsCard({ img, title, desc, cta, to }) {
-    return (
-      <div className="bg-white rounded-xl shadow hover:shadow-lg border border-gray-100 hover:border-primary p-6 flex flex-col items-center transition">
-        <img
-          src={img}
-          alt={title}
-          className="w-24 h-24 object-cover rounded-lg mb-3"
-          style={{ objectFit: "cover" }}
-        />
-        <div className="font-bold text-lg text-dark mb-1 text-center">
-          {title}
-        </div>
-        <div className="text-sm text-muted mb-3 text-center">{desc}</div>
-        {to && cta && (
-          <Link
-            to={to}
-            className="bg-primary hover:bg-secondary text-white px-4 py-2 rounded font-semibold text-sm shadow transition"
-          >
-            {cta}
-          </Link>
-        )}
-      </div>
     );
   }
 
@@ -450,23 +385,13 @@ export default function HomePage() {
     );
   }
 
-  function SkeletonPromoCard() {
-    return (
-      <div className="animate-pulse bg-white rounded-xl shadow border border-gray-100 p-6 flex flex-col items-center">
-        <div className="w-24 h-24 bg-gray-200 rounded-lg mb-3" />
-        <div className="h-4 w-2/3 bg-gray-200 rounded mb-2" />
-        <div className="h-3 w-1/2 bg-gray-100 rounded mb-2" />
-        <div className="h-5 w-1/3 bg-gray-200 rounded mb-2" />
-      </div>
-    );
-  }
-
   return (
     <div className="w-full flex flex-col items-center">
       {/* Carousel */}
       <div className="w-full max-w-[1400px] px-2 sm:px-6">
         {banners.length > 0 && <Carousel banners={banners} />}
       </div>
+
       {/* Categorías */}
       <div className="w-full max-w-[1400px] px-2 sm:px-6 mb-12">
         <Link to="/categorias">
@@ -480,239 +405,157 @@ export default function HomePage() {
               <SkeletonCategoryCard key={i} />
             ))}
           </div>
-        ) : categories.length === 0 ? (
+        ) : categoriesMapped.length === 0 ? (
           <div className="text-gray-500">No hay categorías disponibles.</div>
         ) : (
-          <>
-            <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-8 gap-x-6 gap-y-8">
-              {categories
-                .slice(
-                  catPage * categoriesPerPage,
-                  (catPage + 1) * categoriesPerPage
+          <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-8 gap-x-6 gap-y-8">
+            {categoriesMapped
+              .slice(
+                catPage * categoriesPerPage,
+                (catPage + 1) * categoriesPerPage
+              )
+              .map((cat) => (
+                <CategoryCard key={cat.name} {...cat} />
+              ))}
+          </div>
+        )}
+        {categoriesMapped.length > categoriesPerPage && (
+          <div className="flex justify-center mt-4 gap-2">
+            <button
+              className="px-3 py-1 rounded bg-accent text-primary font-semibold disabled:opacity-50"
+              onClick={() => setCatPage((p) => Math.max(0, p - 1))}
+              disabled={catPage === 0}
+            >
+              ←
+            </button>
+            <span className="text-sm text-gray-600">
+              {catPage + 1} /{" "}
+              {Math.ceil(categoriesMapped.length / categoriesPerPage)}
+            </span>
+            <button
+              className="px-3 py-1 rounded bg-accent text-primary font-semibold disabled:opacity-50"
+              onClick={() =>
+                setCatPage((p) =>
+                  Math.min(
+                    Math.ceil(categoriesMapped.length / categoriesPerPage) - 1,
+                    p + 1
+                  )
                 )
-                .map((cat) => (
-                  <CategoryCard key={cat.name} {...cat} />
-                ))}
-            </div>
-            {categories.length > categoriesPerPage && (
-              <div className="flex justify-center mt-4 gap-2">
-                <button
-                  className="px-3 py-1 rounded bg-accent text-primary font-semibold disabled:opacity-50"
-                  onClick={() => setCatPage((p) => Math.max(0, p - 1))}
-                  disabled={catPage === 0}
-                >
-                  ←
-                </button>
-                <span className="text-sm text-gray-600">
-                  {catPage + 1} /{" "}
-                  {Math.ceil(categories.length / categoriesPerPage)}
-                </span>
-                <button
-                  className="px-3 py-1 rounded bg-accent text-primary font-semibold disabled:opacity-50"
-                  onClick={() =>
-                    setCatPage((p) =>
-                      Math.min(
-                        Math.ceil(categories.length / categoriesPerPage) - 1,
-                        p + 1
-                      )
-                    )
-                  }
-                  disabled={
-                    catPage >=
-                    Math.ceil(categories.length / categoriesPerPage) - 1
-                  }
-                >
-                  →
-                </button>
-              </div>
-            )}
-          </>
+              }
+              disabled={
+                catPage >=
+                Math.ceil(categoriesMapped.length / categoriesPerPage) - 1
+              }
+            >
+              →
+            </button>
+          </div>
         )}
       </div>
+
       {/* Promociones destacadas */}
       <div className="w-full max-w-[1400px] px-2 sm:px-6 mb-12">
         <h2 className="text-2xl sm:text-3xl font-semibold mb-6 text-dark">
           Promociones destacadas
         </h2>
-        {loadingPromos ? (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {Array.from({ length: 3 }).map((_, i) => (
-              <SkeletonProductCard key={i} />
-            ))}
-          </div>
-        ) : promos.length === 0 ? (
+        {loadingProductos ? null : promosMapped.length === 0 ? (
           <div className="text-gray-500">No hay productos en promoción.</div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-8">
-            {promos.slice(0, 10).map((prod) => (
-              <ProductCardWithFallback
-                key={prod.id}
-                id={prod.id}
-                name={prod.nombre}
-                brand={prod.marca}
-                img={
-                  (Array.isArray(prod.imagenes) && prod.imagenes[0]) ||
-                  undefined
-                }
-                price={prod.precio}
-                weight={prod.unidadMedida}
-                offer={
-                  prod.descuento > 0 ? `${prod.descuento}% OFF` : undefined
-                }
-                bestSeller={prod.bestSeller}
-                onQuickView={setQuickView}
-              />
+            {promosMapped.slice(0, 10).map((prod) => (
+              <ProductCardWithFallback key={prod.id} {...prod} />
             ))}
           </div>
         )}
       </div>
+
       {/* Productos destacados */}
       <div className="w-full max-w-[1400px] px-2 sm:px-6 mb-16">
         <h2 className="text-2xl sm:text-3xl font-semibold mb-6 text-dark">
           Productos destacados
         </h2>
         <div className="relative flex flex-col items-center w-full">
-          {/* Mobile: slider horizontal con scroll snap */}
-          {loadingDestacados ? (
-            <div className="w-full flex justify-center">
-              <div className="flex gap-8 overflow-x-auto pb-2 px-2 max-w-[1200px] w-full">
-                {Array.from({ length: 4 }).map((_, i) => (
-                  <SkeletonProductCard key={i} />
-                ))}
-              </div>
-            </div>
-          ) : (
-            <div className="w-full flex justify-center">
-              <div
-                className="flex gap-8 overflow-x-auto pb-2 px-2 max-w-[1200px] w-full sm:hidden"
-                style={{
-                  scrollSnapType: "x mandatory",
-                  WebkitOverflowScrolling: "touch",
-                }}
-              >
-                {productosDestacados
-                  .slice(
-                    prodPage * productsPerPage,
-                    (prodPage + 1) * productsPerPage
-                  )
-                  .map((prod) => (
-                    <div
-                      key={prod.id || prod.nombre}
-                      className="min-w-[220px] max-w-[270px] flex-shrink-0 flex h-full justify-center"
-                      style={{ scrollSnapAlign: "center" }}
-                    >
-                      <ProductCardWithFallback
-                        id={prod.id}
-                        name={prod.nombre}
-                        brand={prod.marca}
-                        img={
-                          (Array.isArray(prod.imagenes) &&
-                            prod.imagenes[0]?.imagen) ||
-                          (Array.isArray(prod.imagenes) &&
-                            typeof prod.imagenes[0] === "string" &&
-                            prod.imagenes[0]) ||
-                          undefined
-                        }
-                        price={prod.precio}
-                        weight={prod.unidad_medida}
-                        offer={
-                          prod.descuento > 0
-                            ? `${prod.descuento}% OFF`
-                            : undefined
-                        }
-                        bestSeller={prod.bestSeller}
-                        onQuickView={setQuickView}
-                      />
-                    </div>
-                  ))}
-              </div>
-            </div>
-          )}
-          {/* Desktop: masonry-like grid */}
-          {loadingDestacados ? (
-            <div className="hidden sm:flex justify-center w-full">
-              <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-x-12 gap-y-14 auto-rows-[1fr] px-2 max-w-[2000px] w-full justify-items-center">
-                {Array.from({ length: 6 }).map((_, i) => (
-                  <SkeletonProductCard key={i} />
-                ))}
-              </div>
-            </div>
-          ) : (
-            <>
-              <div className="hidden sm:flex justify-center w-full">
-                <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-x-12 gap-y-14 auto-rows-[1fr] px-2 max-w-[2000px] w-full justify-items-center">
-                  {productosDestacados
-                    .slice(
-                      prodPage * productsPerPage,
-                      (prodPage + 1) * productsPerPage
-                    )
-                    .map((prod) => (
-                      <div
-                        key={prod.id || prod.nombre}
-                        className="flex h-full min-h-0 justify-center"
-                      >
-                        <ProductCardWithFallback
-                          id={prod.id}
-                          name={prod.nombre}
-                          brand={prod.marca}
-                          img={
-                            (Array.isArray(prod.imagenes) &&
-                              prod.imagenes[0]?.imagen) ||
-                            (Array.isArray(prod.imagenes) &&
-                              typeof prod.imagenes[0] === "string" &&
-                              prod.imagenes[0]) ||
-                            undefined
-                          }
-                          price={prod.precio}
-                          weight={prod.unidad_medida}
-                          offer={
-                            prod.descuento > 0
-                              ? `${prod.descuento}% OFF`
-                              : undefined
-                          }
-                          bestSeller={prod.bestSeller}
-                          onQuickView={setQuickView}
-                        />
-                      </div>
-                    ))}
-                </div>
-              </div>
-              {productosDestacados.length > productsPerPage && (
-                <div className="flex justify-center mt-4 gap-2">
-                  <button
-                    className="px-3 py-1 rounded bg-accent text-primary font-semibold disabled:opacity-50"
-                    onClick={() => setProdPage((p) => Math.max(0, p - 1))}
-                    disabled={prodPage === 0}
-                  >
-                    ←
-                  </button>
-                  <span className="text-sm text-gray-600">
-                    {prodPage + 1} /{" "}
-                    {Math.ceil(productosDestacados.length / productsPerPage)}
-                  </span>
-                  <button
-                    className="px-3 py-1 rounded bg-accent text-primary font-semibold disabled:opacity-50"
-                    onClick={() =>
-                      setProdPage((p) =>
-                        Math.min(
-                          Math.ceil(productosDestacados.length / productsPerPage) - 1,
-                          p + 1
-                        )
-                      )
-                    }
-                    disabled={
-                      prodPage >=
-                      Math.ceil(productosDestacados.length / productsPerPage) - 1
-                    }
-                  >
-                    →
-                  </button>
-                </div>
-              )}
-            </>
-          )}
+          {loadingProductos ? null : <>{/* grillas y sliders de productos*/}</>}
         </div>
       </div>
+
+      {/* Desktop: masonry-like grid */}
+      {loadingProductos ? null : (
+        <>
+          <div className="hidden sm:flex justify-center w-full">
+            <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-x-12 gap-y-14 auto-rows-[1fr] px-2 max-w-[2000px] w-full justify-items-center">
+              {productosDestacados
+                .slice(
+                  prodPage * productsPerPage,
+                  (prodPage + 1) * productsPerPage
+                )
+                .map((prod) => (
+                  <div
+                    key={prod.id || prod.nombre}
+                    className="flex h-full min-h-0 justify-center"
+                  >
+                    <ProductCardWithFallback
+                      id={prod.id}
+                      name={prod.nombre}
+                      brand={prod.marca}
+                      img={
+                        (Array.isArray(prod.imagenes) &&
+                          prod.imagenes[0]?.imagen) ||
+                        (Array.isArray(prod.imagenes) &&
+                          typeof prod.imagenes[0] === "string" &&
+                          prod.imagenes[0]) ||
+                        undefined
+                      }
+                      price={prod.precio}
+                      weight={prod.unidad_medida}
+                      offer={
+                        prod.descuento > 0
+                          ? `${prod.descuento}% OFF`
+                          : undefined
+                      }
+                      bestSeller={prod.bestSeller}
+                      onQuickView={() => handleQuickView(prod.id)}
+                    />
+                  </div>
+                ))}
+            </div>
+          </div>
+          {productosDestacados.length > productsPerPage && (
+            <div className="flex justify-center mt-4 gap-2">
+              <button
+                className="px-3 py-1 rounded bg-accent text-primary font-semibold disabled:opacity-50"
+                onClick={() => setProdPage((p) => Math.max(0, p - 1))}
+                disabled={prodPage === 0}
+              >
+                ←
+              </button>
+              <span className="text-sm text-gray-600">
+                {prodPage + 1} /{" "}
+                {Math.ceil(productosDestacados.length / productsPerPage)}
+              </span>
+              <button
+                className="px-3 py-1 rounded bg-accent text-primary font-semibold disabled:opacity-50"
+                onClick={() =>
+                  setProdPage((p) =>
+                    Math.min(
+                      Math.ceil(productosDestacados.length / productsPerPage) -
+                        1,
+                      p + 1
+                    )
+                  )
+                }
+                disabled={
+                  prodPage >=
+                  Math.ceil(productosDestacados.length / productsPerPage) - 1
+                }
+              >
+                →
+              </button>
+            </div>
+          )}
+        </>
+      )}
+      {/* End main container */}
       {quickView && (
         <ProductQuickView
           product={quickView}
