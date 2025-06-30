@@ -204,7 +204,7 @@ export default function BuscarPage() {
   const searchParam = useQueryParam("search");
   const [query, setQuery] = useState(searchParam);
   const [marcas, setMarcas] = useState([]);
-  const [marcasDisponibles, setMarcasDisponibles] = useState([]); // <-- NUEVO
+  const [marcasDisponibles, setMarcasDisponibles] = useState([]);
   const [precioMin, setPrecioMin] = useState("");
   const [precioMax, setPrecioMax] = useState("");
   const [promo, setPromo] = useState(false);

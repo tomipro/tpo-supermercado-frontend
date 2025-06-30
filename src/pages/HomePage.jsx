@@ -137,7 +137,7 @@ export default function HomePage() {
     );
   }
 
-  // --------- ACÁ VA LA FUNCION CategoryCard QUE TE FALTABA ---------
+  // --------- ACÁ VA LA FUNCION CategoryCard ---------
   function CategoryCard({ name, img, to }) {
     const initial = name?.[0]?.toUpperCase() || "?";
     return (
@@ -169,7 +169,7 @@ export default function HomePage() {
   }
   // -------------------------------------------------------------------
 
-  // Carrusel de banners (igual que antes)
+  // Carrusel de banners
   function Carousel({ banners }) {
     const [idx, setIdx] = useState(0);
     const [imgSrc, setImgSrc] = useState(banners[0]?.img || FALLBACK_IMG);
