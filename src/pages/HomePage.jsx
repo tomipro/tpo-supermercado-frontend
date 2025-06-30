@@ -5,11 +5,18 @@ import { useAuth } from "../auth/AuthProvider";
 import promoBannerImg from "../assets/banner2.jpeg";
 import promoBannerImg2 from "../assets/banner3.jpg";
 import promoBannerImg4 from "../assets/banner4.webp";
+import { useDispatch, useSelector } from "react-redux";
+import { fetchProductos } from "../redux/productosSlice";
 
 const FALLBACK_IMG = "https://cdn-icons-png.flaticon.com/512/1046/1046857.png";
 
 export default function HomePage() {
   const { token } = useAuth();
+  const dispatch = useDispatch();
+  const productosDestacados = useSelector((state) => state.productos.productos);
+  const loadingDestacados = useSelector((state) => state.productos.loading);
+  const errorDestacados = useSelector((state) => state.productos.error);
+
   const [quickView, setQuickView] = useState(null);
   const [banners, setBanners] = useState([]);
   const [categories, setCategories] = useState([]);
@@ -17,7 +24,6 @@ export default function HomePage() {
   const [destacados, setDestacados] = useState([]);
   const [loadingCategories, setLoadingCategories] = useState(true);
   const [loadingPromos, setLoadingPromos] = useState(true);
-  const [loadingDestacados, setLoadingDestacados] = useState(true);
   const [addCartLoading, setAddCartLoading] = useState(false);
   const [showAllCategories, setShowAllCategories] = useState(false);
   const [catPage, setCatPage] = useState(0);
@@ -83,14 +89,8 @@ export default function HomePage() {
 
   // Productos destacados
   useEffect(() => {
-    setLoadingDestacados(true);
-    fetch("http://localhost:4040/producto?destacados=true")
-      .then((res) => res.json())
-      .then((prodData) => {
-        setDestacados(Array.isArray(prodData.content) ? prodData.content : []);
-      })
-      .catch(() => setDestacados([]))
-      .finally(() => setLoadingDestacados(false));
+    dispatch(fetchProductos({ destacados: true }));
+    // eslint-disable-next-line
   }, []);
 
   async function handleAddToCart(id, cantidad) {
@@ -590,7 +590,7 @@ export default function HomePage() {
                   WebkitOverflowScrolling: "touch",
                 }}
               >
-                {destacados
+                {productosDestacados
                   .slice(
                     prodPage * productsPerPage,
                     (prodPage + 1) * productsPerPage
@@ -641,7 +641,7 @@ export default function HomePage() {
             <>
               <div className="hidden sm:flex justify-center w-full">
                 <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-x-12 gap-y-14 auto-rows-[1fr] px-2 max-w-[2000px] w-full justify-items-center">
-                  {destacados
+                  {productosDestacados
                     .slice(
                       prodPage * productsPerPage,
                       (prodPage + 1) * productsPerPage
@@ -677,7 +677,7 @@ export default function HomePage() {
                     ))}
                 </div>
               </div>
-              {destacados.length > productsPerPage && (
+              {productosDestacados.length > productsPerPage && (
                 <div className="flex justify-center mt-4 gap-2">
                   <button
                     className="px-3 py-1 rounded bg-accent text-primary font-semibold disabled:opacity-50"
@@ -688,21 +688,21 @@ export default function HomePage() {
                   </button>
                   <span className="text-sm text-gray-600">
                     {prodPage + 1} /{" "}
-                    {Math.ceil(destacados.length / productsPerPage)}
+                    {Math.ceil(productosDestacados.length / productsPerPage)}
                   </span>
                   <button
                     className="px-3 py-1 rounded bg-accent text-primary font-semibold disabled:opacity-50"
                     onClick={() =>
                       setProdPage((p) =>
                         Math.min(
-                          Math.ceil(destacados.length / productsPerPage) - 1,
+                          Math.ceil(productosDestacados.length / productsPerPage) - 1,
                           p + 1
                         )
                       )
                     }
                     disabled={
                       prodPage >=
-                      Math.ceil(destacados.length / productsPerPage) - 1
+                      Math.ceil(productosDestacados.length / productsPerPage) - 1
                     }
                   >
                     →

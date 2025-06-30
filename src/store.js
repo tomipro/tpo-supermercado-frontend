@@ -4,6 +4,7 @@ import categoriesReducer from "./redux/categoriesSlice";
 import direccionesReducer from "./redux/direccionesSlice";
 import usuarioReducer from "./redux/usuarioSlice";
 import authReducer from "./redux/authSlice";
+import productosReducer from "./redux/productosSlice";
 
 const store = configureStore({
   reducer: {
@@ -12,6 +13,7 @@ const store = configureStore({
     categorias: categoriesReducer,
     direcciones: direccionesReducer,
     usuario: usuarioReducer,
+    productos: productosReducer,
   },
 });
 

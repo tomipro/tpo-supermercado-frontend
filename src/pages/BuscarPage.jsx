@@ -1,9 +1,10 @@
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import ProductCard from "../components/ProductCard";
 import { useAuth } from "../auth/AuthProvider";
 import { useDispatch, useSelector } from "react-redux";
 import { fetchCarrito, patchCarrito } from "../redux/cartSlice";
+import { fetchProductos } from "../redux/productosSlice";
 
 
 const SORT_OPTIONS = [
@@ -196,6 +197,9 @@ export default function BuscarPage() {
   const categoriaIdParam = useQueryParam("categoriaId");
   const token = useSelector((state) => state.auth.token);
   const dispatch = useDispatch();
+  const productosRedux = useSelector((state) => state.productos.productos);
+  const loading = useSelector((state) => state.productos.loading);
+  const error = useSelector((state) => state.productos.error);
   const searchParam = useQueryParam("search");
   const [query, setQuery] = useState(searchParam);
   const [marcas, setMarcas] = useState([]);
@@ -207,9 +211,8 @@ export default function BuscarPage() {
   const [subcategorias, setSubcategorias] = useState([]);
   const [sortBy, setSortBy] = useState("relevancia");
   const [quickView, setQuickView] = useState(null);
-  const [productos, setProductos] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
+  const [loadingProductos, setLoading] = useState(true);
+  const [errorProductos, setError] = useState("");
   const [categoriasApi, setCategoriasApi] = useState([]);
 
   const [page, setPage] = useState(0);
@@ -245,57 +248,17 @@ export default function BuscarPage() {
 
   // Fetch productos del backend paginado
   useEffect(() => {
-    async function fetchProductos() {
-      setLoading(true);
-      setError("");
-      try {
-        let url = "http://localhost:4040/producto";
-        const params = [];
-        if (query) params.push(`nombre=${encodeURIComponent(query)}`);
-        if (marcas.length > 0) params.push(`marca=${marcas.join(",")}`);
-        if (categorias.length > 0)
-          params.push(`categoriaId=${categorias[0]}`); // Solo el primer ID
-        if (subcategorias.length > 0)
-          params.push(`subcategoriaId=${subcategorias.join(",")}`);
-        if (precioMin) params.push(`precioMin=${precioMin}`);
-        if (precioMax) params.push(`precioMax=${precioMax}`);
-        params.push(`page=${page}`);
-        params.push(`size=${pageSize}`);
-        if (params.length > 0) url += "?" + params.join("&");
-
-        const res = await fetch(url);
-        if (!res.ok) throw new Error("Error al cargar productos");
-        const data = await res.json();
-        const productosArr = Array.isArray(data.content) ? data.content : [];
-        setProductos(productosArr);
-
-        // Extrae marcas únicas de los productos
-        const marcasSet = new Set();
-        productosArr.forEach((p) => {
-          if (p.marca && typeof p.marca === "string" && p.marca.trim() !== "") {
-            marcasSet.add(p.marca.trim());
-          }
-        });
-        setMarcasDisponibles(Array.from(marcasSet).sort((a, b) => a.localeCompare(b)));
-
-        setTotalPages(
-          data.totalPages ||
-            Math.ceil(
-              (data.totalElements || data.content?.length || 0) / pageSize
-            )
-        );
-        setTotalElements(data.totalElements || 0);
-      } catch (err) {
-        setError("No se pudieron cargar los productos.");
-        setProductos([]);
-        setMarcasDisponibles([]); // <-- Limpia marcas si hay error
-        setTotalPages(1);
-        setTotalElements(0);
-      } finally {
-        setLoading(false);
-      }
-    }
-    fetchProductos();
+    dispatch(fetchProductos({
+      nombre: query,
+      categoriaId: categorias[0],
+      subcategoriaId: subcategorias.join(","),
+      marca: marcas.join(","),
+      precioMin,
+      precioMax,
+      page,
+      size: pageSize,
+      promo,
+    }));
     // eslint-disable-next-line
   }, [
     query,
@@ -322,7 +285,7 @@ export default function BuscarPage() {
     .filter((v, i, arr) => arr.findIndex((x) => x.id === v.id) === i);
 
   // Solo productos con stock > 0 y, si promo está activo, descuento > 0
-  const productosFiltrados = [...productos]
+  const productosFiltrados = [...productosRedux]
     .filter((p) => Number(p.stock) > 0)
     .filter((p) => !promo || Number(p.descuento) > 0)
     .sort((a, b) => {
@@ -385,6 +348,17 @@ export default function BuscarPage() {
   // Paginación
   const [totalPages, setTotalPages] = useState(1);
   const [totalElements, setTotalElements] = useState(0);
+
+  // Nuevo useEffect para recalcular marcas disponibles
+  useEffect(() => {
+    const marcasSet = new Set();
+    productosRedux.forEach((p) => {
+      if (p.marca && typeof p.marca === "string" && p.marca.trim() !== "") {
+        marcasSet.add(p.marca.trim());
+      }
+    });
+    setMarcasDisponibles(Array.from(marcasSet).sort((a, b) => a.localeCompare(b)));
+  }, [productosRedux]);
 
   return (
     <div className="w-full max-w-[1600px] mx-auto px-2 sm:px-6 py-8">
