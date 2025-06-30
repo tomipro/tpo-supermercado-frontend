@@ -14,7 +14,10 @@ import {
 import AdminNavbar from "../components/AdminNavbar";
 import { Outlet, useLocation } from "react-router-dom";
 import { useAuth } from "../auth/AuthProvider";
-import { useSelector } from "react-redux";
+import { useSelector, useDispatch} from "react-redux";
+import axios from "axios";
+import {fetchProductos} from "../redux/productosSlice";
+import { fetchUsuarios } from "../redux/usuariosSlice";
 
 const colores = [
   "#8884d8",
@@ -139,7 +142,7 @@ export default function AdminPage() {
   const location = useLocation();
   const isAdminRoot = location.pathname === "/admin";
   const token = useSelector((state) => state.auth.token);
-
+  const dispatch = useDispatch();
   const [ventasPorDia, setVentasPorDia] = useState([]);
   const [ventasPorMes, setVentasPorMes] = useState([]);
   const [pronosticoVentas, setPronosticoVentas] = useState([]);
@@ -155,11 +158,9 @@ export default function AdminPage() {
       setError("");
       try {
         // 1. Traer todos los usuarios (con token)
-        const usuariosRes = await fetch("http://localhost:4040/usuarios", {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        if (!usuariosRes.ok) throw new Error("No autorizado o error al cargar usuarios.");
-        const usuarios = await usuariosRes.json();
+        const usuariosRes = await dispatch(fetchUsuarios());
+        if (!usuariosRes.status === 200) throw new Error("No autorizado o error al cargar usuarios.");
+        const usuarios = usuariosRes.data;
         if (!Array.isArray(usuarios) || usuarios.length === 0) {
           setVentasPorDia([]);
           setVentasPorMes([]);
@@ -172,14 +173,14 @@ export default function AdminPage() {
         const ordenesPorUsuario = await Promise.all(
           usuarios.map(async (u) => {
             try {
-              const r = await fetch(`http://localhost:4040/ordenes/usuarios/${u.id}`, {
+              const r = await axios.get(`http://localhost:4040/usuarios/${u.id}/ordenes`, {
                 headers: { Authorization: `Bearer ${token}` },
               });
-              if (!r.ok) return [];
+              if (r.status !== 200) return [];
               // Si la respuesta es vacía o error 500, devolver []
               let data = null;
               try {
-                data = await r.json();
+                data = r.data;
               } catch {
                 return [];
               }
@@ -224,11 +225,8 @@ export default function AdminPage() {
     }
     async function fetchProductos() {
       try {
-        const res = await fetch("http://localhost:4040/producto", {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        if (!res.ok) throw new Error("No autorizado o error al cargar productos.");
-        const data = await res.json();
+        const res = await dispatch(fetchProductos());
+        const data = res.data;
         const productos = Array.isArray(data.content) ? data.content : Array.isArray(data) ? data : [];
         // Top productos más vendidos
         const productosOrdenados = [...productos]
@@ -250,7 +248,7 @@ export default function AdminPage() {
     }
     fetchVentas();
     fetchProductos();
-  }, [token]);
+  }, [dispatch, token]);
 
   return (
     <div className="max-w-6xl mx-auto">

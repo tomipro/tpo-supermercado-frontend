@@ -4,9 +4,10 @@ import { useEffect } from "react";
 import { useSelector, useDispatch } from "react-redux";
 import CategoryAdminListCard from "../components/CategoryAdminListCard";
 import { fetchCategorias, deleteCategoria } from "../redux/categoriesSlice";
+import { loginThunk } from "../redux/authSlice";
 
 export default function AdminPanelCategoriesPage() {
-  const { token } = useAuth();
+  const { token } = useSelector((state) => state.auth);
   const dispatch = useDispatch();
   const categoriasState = useSelector((state) => state.categorias);
   const categorias = categoriasState.categorias;

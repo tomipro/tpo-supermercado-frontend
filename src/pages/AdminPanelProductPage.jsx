@@ -2,10 +2,13 @@ import { useEffect, useState } from "react";
 import { useAuth } from "../auth/AuthProvider";
 import { useNavigate } from "react-router-dom";
 import ProductAdminListCard from "../components/ProductAdminListCard";
-import { useSelector } from "react-redux";
+import { useSelector, useDispatch } from "react-redux";
+import { fetchProducto, deleteProducto } from "../redux/productosSlice";
+import axios from "axios";
+import { loginThunk } from "../redux/authSlice";
 
 export default function AdminPanelProductPage() {
-  const { usuario } = useAuth();
+  const dispatch = useDispatch();
   const token = useSelector((state) => state.auth.token);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
@@ -20,13 +23,9 @@ export default function AdminPanelProductPage() {
   useEffect(() => {
     async function fetchProductos() {
       try {
-        const res = await fetch(`http://localhost:4040/producto?page=${page}&size=${pageSize}`, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
-        if (res.ok) {
-          const data = await res.json();
+        const res = await dispatch(fetchProducto({ token, page, pageSize }));
+        if (res.status === 200) {
+          const data = res.data;
           if (Array.isArray(data.content)) {
             setProductos(data.content);
             setTotalPages(data.totalPages || 1);
@@ -44,26 +43,14 @@ export default function AdminPanelProductPage() {
       }
     }
     fetchProductos();
-  }, [token, page, pageSize]);
+  }, [dispatch, token, page, pageSize]);
 
   const handleEdit = (producto) => {
     navigate(`/editar-producto/${producto.id}`);
   };
 
   const handleDelete = async (producto) => {
-    const res = await fetch(`http://localhost:4040/producto/${producto.id}`, {
-      method: "DELETE",
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    });
-    if (res.ok) {
-      setSuccess("Producto eliminado correctamente.");
-      setProductos((prev) => prev.filter((p) => p.id !== producto.id));
-      setTotalElements((prev) => prev - 1);
-    } else {
-      setError("No se pudo eliminar el producto.");
-    }
+    dispatch(deleteProducto({ id: producto.id, token }));
   };
 
   const handleCreate = () => {

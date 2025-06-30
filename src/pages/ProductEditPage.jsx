@@ -1,7 +1,9 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useAuth } from "../auth/AuthProvider";
-import { useSelector } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
+import { createProducto, updateProducto } from "../redux/productosSlice";
+import { fetchCategorias } from "../redux/categoriasSlice";
 
 const PRODUCTO_VACIO = {
   nombre: "",
@@ -22,6 +24,7 @@ export default function ProductEditPage({ modo = "editar" }) {
   const { id } = useParams();
   const token = useSelector((state) => state.auth.token);
   const navigate = useNavigate();
+  const dispatch = useDispatch();
   const [producto, setProducto] = useState(modo === "crear" ? PRODUCTO_VACIO : null);
   const [categorias, setCategorias] = useState([]);
   const [error, setError] = useState("");
@@ -32,28 +35,23 @@ export default function ProductEditPage({ modo = "editar" }) {
   useEffect(() => {
     async function fetchCategorias() {
       try {
-        const res = await fetch("http://localhost:4040/categorias", {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        if (res.ok) {
-          const data = await res.json();
-          setCategorias(data.content || data);
+        const res = await dispatch(fetchCategorias());
+        if (res.status === 200) {
+          setCategorias(res.data.content || res.data);
         }
-      } catch {}
+      } catch { /* empty */ }
     }
     fetchCategorias();
-  }, [token]);
+  }, [dispatch, token]);
 
   // Solo buscar producto si es modo editar
   useEffect(() => {
     if (modo === "editar") {
       async function fetchProducto() {
         try {
-          const res = await fetch(`http://localhost:4040/producto/id/${id}`, {
-            headers: { Authorization: `Bearer ${token}` },
-          });
-          if (res.ok) {
-            const data = await res.json();
+          const res = await dispatch(fetchProducto({ id, token }));
+          if (res.status === 200) {
+            const data = res.data;
             // Normaliza imágenes: siempre array de objetos { url }
             const imagenesNormalizadas = Array.isArray(data.imagenes)
               ? data.imagenes.map(img =>
@@ -97,7 +95,7 @@ export default function ProductEditPage({ modo = "editar" }) {
       }
       fetchProducto();
     }
-  }, [id, token, modo]);
+  }, [id, token, modo, dispatch, categorias]);
 
   useEffect(() => {
     if (
@@ -144,12 +142,7 @@ export default function ProductEditPage({ modo = "editar" }) {
     e.preventDefault();
     setError("");
     setSuccess("");
-    try {
-      const url =
-        modo === "crear"
-          ? "http://localhost:4040/producto"
-          : `http://localhost:4040/producto/${id}`;
-      const method = modo === "crear" ? "POST" : "PUT";
+    try {        
       const body = {
         nombre: producto.nombre,
         descripcion: producto.descripcion,
@@ -164,15 +157,10 @@ export default function ProductEditPage({ modo = "editar" }) {
         estado: producto.estado,
         ventasTotales: producto.ventas_totales === "" || producto.ventas_totales == null ? 0 : producto.ventas_totales,
       };
-      const res = await fetch(url, {
-        method,
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify(body),
-      });
-      if (res.ok) {
+      const res = modo === "crear"
+          ? dispatch(createProducto(body))
+          : dispatch(updateProducto({ id: producto.id, data: body }));
+      if (res.status === 200) {
         setSuccess(modo === "crear" ? "Producto creado correctamente." : "Producto actualizado correctamente.");
         setTimeout(() => navigate("/admin"), 1500);
       } else {

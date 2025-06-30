@@ -8,6 +8,7 @@ import {
   addCategoria,
   editCategoria,
 } from "../redux/categoriesSlice";
+import axios from "axios";
 
 // Plantilla para nueva categoría
 const CATEGORIA_VACIA = {
@@ -19,7 +20,7 @@ const CATEGORIA_VACIA = {
 
 export default function CategoryEditPage({ modo = "editar" }) {
   const { id } = useParams();
-  const { token } = useAuth();
+  const { token } = useSelector((state) => state.auth);
   const navigate = useNavigate();
   const dispatch = useDispatch();
   const categoriasRedux = useSelector((state) => state.categorias.categorias);
@@ -38,11 +39,9 @@ export default function CategoryEditPage({ modo = "editar" }) {
   // Mueve estas funciones fuera del useEffect para poder usarlas en los handlers
   async function fetchCategoria() {
     try {
-      const res = await fetch(`http://localhost:4040/categorias/${id}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (res.ok) {
-        const data = await res.json();
+      const res = await dispatch(fetchCategorias({ id, token }));
+      if (res.status === 200) {
+        const data = res.data;
         setCategoria(data);
         setNombre(data.nombre);
         setParentId(data.parentCategoria?.id || "");
@@ -73,25 +72,23 @@ export default function CategoryEditPage({ modo = "editar" }) {
       setSubcategorias([...subcategorias, catToAdd]);
       setSelectedSubId("");
     } else {
-      const res = await fetch(
-        `http://localhost:4040/categorias/${catToAdd.id}`,
-        {
-          method: "PUT",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify({
-            nombre: catToAdd.nombre,
-            parentId: categoria.id,
-          }),
-        }
+      const res = await dispatch(
+        editCategoria({
+          id: catToAdd.id,
+          nombre: catToAdd.nombre,
+          parentId: categoria.id,
+          token,
+        })
       );
-      if (res.ok) {
+      if (res.status === 200) {
         setSelectedSubId("");
         await fetchCategoria();
       }
+    if (res.meta.requestStatus === "fulfilled") {
+      setSelectedSubId("");
+      dispatch(fetchCategorias());
     }
+  }
   };
 
   // Quitar subcategoría
@@ -99,21 +96,10 @@ export default function CategoryEditPage({ modo = "editar" }) {
     if (modo === "crear") {
       setSubcategorias(subcategorias.filter((s) => s.id !== sub.id));
     } else {
-      const res = await fetch(
-        `http://localhost:4040/categorias/${sub.id}`,
-        {
-          method: "PUT",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify({
-            nombre: sub.nombre,
-            parentId: null,
-          }),
-        }
+      const res = await dispatch(
+        editCategoria({ id: sub.id, nombre: sub.nombre, parentId: null, token })
       );
-      if (res.ok) {
+      if (res.meta.requestStatus === "fulfilled") {
         await fetchCategoria();
       }
     }
@@ -265,4 +251,3 @@ export default function CategoryEditPage({ modo = "editar" }) {
     </div>
   );
 }
-
