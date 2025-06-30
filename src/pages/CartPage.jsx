@@ -4,9 +4,15 @@ import { motion, AnimatePresence } from "framer-motion";
 import { FaTrash, FaPlus, FaMinus, FaShoppingCart } from "react-icons/fa";
 import dinoPensativo from "../assets/dino_pensativo.png";
 import { useSelector, useDispatch } from "react-redux";
-import { fetchCarrito, patchCarrito, deleteCarrito, deleteAllCarrito } from "../redux/cartSlice";
+import {
+  fetchCarrito,
+  patchCarrito,
+  deleteCarrito,
+  deleteAllCarrito,
+} from "../redux/cartSlice";
+import { fetchProductos } from "../redux/productosSlice";
 
-// Muestra un mensaje  y imagen del dino cuando el carrito está vacío
+// Muestra un mensaje y la imagen del dino cuando el carrito está vacío
 function CarritoVacio() {
   return (
     <div className="flex flex-col items-center justify-center mt-16 mb-16">
@@ -52,43 +58,46 @@ function CarritoVacio() {
   );
 }
 
-// Página principal del carrito
 export default function CartPage() {
-  // const { carrito, setCarrito, loading, error, refreshCarrito } = useCart();
   const carrito = useSelector((state) => state.cart.carrito);
   const loading = useSelector((state) => state.cart.loading);
   const error = useSelector((state) => state.cart.error);
   const token = useSelector((state) => state.auth.token);
+  const productos = useSelector((state) => state.productos.productos);
   const dispatch = useDispatch();
   const [imagenesProductos, setImagenesProductos] = useState({});
   const navigate = useNavigate();
 
+  // Carga el carrito al montar
   useEffect(() => {
     if (token) dispatch(fetchCarrito(token));
     // eslint-disable-next-line
   }, [token, dispatch]);
 
-  // Trae imágenes de los productos del carrito (si hace falta)
+  // Si productos NO está cargado, traelo al entrar
+  useEffect(() => {
+    if (!productos || productos.length === 0) {
+      dispatch(fetchProductos());
+    }
+    // eslint-disable-next-line
+  }, [dispatch, productos]);
+
+  // Mapea imágenes desde productos en Redux
   useEffect(() => {
     if (!carrito || !carrito.items) return;
 
+    const imagenesMap = {};
     carrito.items.forEach((item) => {
-      if (!imagenesProductos[item.productoId]) {
-        fetch(`http://localhost:4040/producto/id/${item.productoId}`)
-          .then((res) => (res.ok ? res.json() : null))
-          .then((data) => {
-            if (data && data.imagenes && data.imagenes.length > 0) {
-              setImagenesProductos((prev) => ({
-                ...prev,
-                [item.productoId]: data.imagenes[0],
-              }));
-            }
-          })
-          .catch(() => {});
+      const prod = productos?.find((p) => p.id === item.productoId);
+      if (prod && prod.imagenes && prod.imagenes.length > 0) {
+        imagenesMap[item.productoId] =
+          typeof prod.imagenes[0] === "string"
+            ? prod.imagenes[0]
+            : prod.imagenes[0].imagen;
       }
     });
-    // eslint-disable-next-line
-  }, [carrito]);
+    setImagenesProductos(imagenesMap);
+  }, [carrito, productos]);
 
   // Disminuye cantidad o elimina si queda solo uno
   const handleDecrement = async (item) => {
@@ -115,7 +124,9 @@ export default function CartPage() {
     const item = carrito.items.find((i) => i.productoId === productoId);
     const cantidadAEliminar = item ? item.cantidad : 1;
     try {
-      await dispatch(deleteAllCarrito({ token, productoId, cantidad: cantidadAEliminar }));
+      await dispatch(
+        deleteAllCarrito({ token, productoId, cantidad: cantidadAEliminar })
+      );
       await dispatch(fetchCarrito(token));
     } catch (e) {
       // Manejo de error por redux
@@ -193,13 +204,17 @@ export default function CartPage() {
                 <div className="flex flex-col items-end gap-2 min-w-[120px]">
                   <div className="text-sm text-gray-500">Precio c/u</div>
                   <div className="font-semibold text-base text-blue-700">
-                    {item.precioUnitario !== undefined && item.precioUnitario !== null
+                    {item.precioUnitario !== undefined &&
+                    item.precioUnitario !== null
                       ? `$${Number(item.precioUnitario).toFixed(2)}`
                       : "-"}
                   </div>
                   <div className="text-xs text-gray-400">
-                    {item.precioUnitario !== undefined && item.precioUnitario !== null
-                      ? `Sin IVA: $${Math.round(Number(item.precioUnitario) / 1.21)}`
+                    {item.precioUnitario !== undefined &&
+                    item.precioUnitario !== null
+                      ? `Sin IVA: $${Math.round(
+                          Number(item.precioUnitario) / 1.21
+                        )}`
                       : ""}
                   </div>
                 </div>
@@ -208,13 +223,21 @@ export default function CartPage() {
                   <div className="font-bold text-lg text-green-700">
                     {item.subtotal !== undefined && item.subtotal !== null
                       ? `$${Number(item.subtotal).toFixed(2)}`
-                      : (item.precioUnitario !== undefined && item.cantidad !== undefined
-                        ? `$${(Number(item.precioUnitario) * Number(item.cantidad)).toFixed(2)}`
-                        : "-")}
+                      : item.precioUnitario !== undefined &&
+                        item.cantidad !== undefined
+                      ? `$${(
+                          Number(item.precioUnitario) * Number(item.cantidad)
+                        ).toFixed(2)}`
+                      : "-"}
                   </div>
                   <div className="text-xs text-gray-400 font-normal">
-                    {(item.precioUnitario !== undefined && item.cantidad !== undefined)
-                      ? `Sin IVA: $${Math.round((Number(item.precioUnitario) * Number(item.cantidad)) / 1.21)}`
+                    {item.precioUnitario !== undefined &&
+                    item.cantidad !== undefined
+                      ? `Sin IVA: $${Math.round(
+                          (Number(item.precioUnitario) *
+                            Number(item.cantidad)) /
+                            1.21
+                        )}`
                       : ""}
                   </div>
                 </div>
@@ -232,23 +255,36 @@ export default function CartPage() {
           {/* Total del carrito */}
           <div className="flex flex-col gap-1 justify-end items-end px-6 py-4 border-t border-blue-100 bg-blue-50">
             <div className="flex gap-4 items-center">
-              <span className="font-semibold text-gray-700 text-lg">Total:</span>
+              <span className="font-semibold text-gray-700 text-lg">
+                Total:
+              </span>
               <span className="font-bold text-2xl text-green-700">
-                {(carrito.total !== undefined && carrito.total !== null && !isNaN(Number(carrito.total)))
+                {carrito.total !== undefined &&
+                carrito.total !== null &&
+                !isNaN(Number(carrito.total))
                   ? `$${Number(carrito.total).toFixed(2)}`
                   : (() => {
                       const total = carrito.items.reduce((sum, item) => {
-                        if (item.subtotal !== undefined && item.subtotal !== null && !isNaN(Number(item.subtotal))) {
+                        if (
+                          item.subtotal !== undefined &&
+                          item.subtotal !== null &&
+                          !isNaN(Number(item.subtotal))
+                        ) {
                           return sum + Number(item.subtotal);
                         }
-                        if (item.precioUnitario !== undefined && item.cantidad !== undefined) {
-                          return sum + (Number(item.precioUnitario) * Number(item.cantidad));
+                        if (
+                          item.precioUnitario !== undefined &&
+                          item.cantidad !== undefined
+                        ) {
+                          return (
+                            sum +
+                            Number(item.precioUnitario) * Number(item.cantidad)
+                          );
                         }
                         return sum;
                       }, 0);
                       return `$${total.toFixed(2)}`;
-                    })()
-                }
+                    })()}
               </span>
             </div>
             <div className="flex gap-4 items-center text-[14px] text-gray-500">
@@ -256,15 +292,29 @@ export default function CartPage() {
               <span>
                 {(() => {
                   let total = 0;
-                  if (carrito.total !== undefined && carrito.total !== null && !isNaN(Number(carrito.total))) {
+                  if (
+                    carrito.total !== undefined &&
+                    carrito.total !== null &&
+                    !isNaN(Number(carrito.total))
+                  ) {
                     total = Number(carrito.total);
                   } else {
                     total = carrito.items.reduce((sum, item) => {
-                      if (item.subtotal !== undefined && item.subtotal !== null && !isNaN(Number(item.subtotal))) {
+                      if (
+                        item.subtotal !== undefined &&
+                        item.subtotal !== null &&
+                        !isNaN(Number(item.subtotal))
+                      ) {
                         return sum + Number(item.subtotal);
                       }
-                      if (item.precioUnitario !== undefined && item.cantidad !== undefined) {
-                        return sum + (Number(item.precioUnitario) * Number(item.cantidad));
+                      if (
+                        item.precioUnitario !== undefined &&
+                        item.cantidad !== undefined
+                      ) {
+                        return (
+                          sum +
+                          Number(item.precioUnitario) * Number(item.cantidad)
+                        );
                       }
                       return sum;
                     }, 0);
@@ -294,21 +344,32 @@ export default function CartPage() {
           <div className="flex justify-between text-gray-700 text-base mb-1">
             <span>Total</span>
             <span className="font-bold text-green-700">
-              {(carrito.total !== undefined && carrito.total !== null && !isNaN(Number(carrito.total)))
+              {carrito.total !== undefined &&
+              carrito.total !== null &&
+              !isNaN(Number(carrito.total))
                 ? `$${Number(carrito.total).toFixed(2)}`
                 : (() => {
                     const total = carrito.items.reduce((sum, item) => {
-                      if (item.subtotal !== undefined && item.subtotal !== null && !isNaN(Number(item.subtotal))) {
+                      if (
+                        item.subtotal !== undefined &&
+                        item.subtotal !== null &&
+                        !isNaN(Number(item.subtotal))
+                      ) {
                         return sum + Number(item.subtotal);
                       }
-                      if (item.precioUnitario !== undefined && item.cantidad !== undefined) {
-                        return sum + (Number(item.precioUnitario) * Number(item.cantidad));
+                      if (
+                        item.precioUnitario !== undefined &&
+                        item.cantidad !== undefined
+                      ) {
+                        return (
+                          sum +
+                          Number(item.precioUnitario) * Number(item.cantidad)
+                        );
                       }
                       return sum;
                     }, 0);
                     return `$${total.toFixed(2)}`;
-                  })()
-              }
+                  })()}
             </span>
           </div>
           {/* Ir a pagar */}
