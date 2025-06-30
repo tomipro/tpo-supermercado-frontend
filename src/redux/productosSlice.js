@@ -1,4 +1,6 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
+import axios from "axios";
+import { a } from "framer-motion/client";
 
 // Traer productos (con filtros opcionales)
 export const fetchProductos = createAsyncThunk(
@@ -18,12 +20,68 @@ export const fetchProductos = createAsyncThunk(
       if (params.destacados) query.push(`destacados=true`);
       if (params.promo) query.push(`promo=true`);
       if (query.length > 0) url += "?" + query.join("&");
-      const res = await fetch(url);
-      if (!res.ok) throw new Error("No se pudieron cargar los productos.");
-      const data = await res.json();
+      const res = await axios.get(url);
+      if (res.status !== 200) throw new Error("No se pudieron cargar los productos.");
+      const data = res.data;
       return Array.isArray(data.content) ? data.content : [];
     } catch (e) {
       return rejectWithValue(e.message || "Error al cargar productos.");
+    }
+  }
+);
+
+export const deleteProducto = createAsyncThunk(
+  "productos/deleteProducto",
+  async (id, { rejectWithValue }) => {
+    try {
+      const res = await axios.delete(`http://localhost:4040/producto/${id}`);
+      if (res.status === 200) {
+        return id;
+      }
+    } catch (e) {
+      return rejectWithValue(e.message || "Error al eliminar producto.");
+    }
+  }
+);
+
+export const fetchProductoById = createAsyncThunk(
+  "productos/fetchProductoById",
+  async (id, { rejectWithValue }) => {
+    try {
+      const res = await axios.get(`http://localhost:4040/producto/${id}`);
+      if (res.status === 200) {
+        return res.data;
+      }
+    } catch (e) {
+      return rejectWithValue(e.message || "Error al cargar producto.");
+    }
+  }
+);
+
+export const createProducto = createAsyncThunk(
+  "productos/createProducto",
+  async (data, { rejectWithValue }) => {
+    try {
+      const res = await axios.post(`http://localhost:4040/producto`, data);
+      if (res.status === 201) {
+        return res.data;
+      }
+    } catch (e) {
+      return rejectWithValue(e.message || "Error al crear producto.");
+    }
+  }
+);
+
+export const updateProducto = createAsyncThunk(
+  "productos/updateProducto",
+  async ({ id, data }, { rejectWithValue }) => {
+    try {
+      const res = await axios.put(`http://localhost:4040/producto/${id}`, data);
+      if (res.status === 200) {
+        return res.data;
+      }
+    } catch (e) {
+      return rejectWithValue(e.message || "Error al actualizar producto.");
     }
   }
 );
