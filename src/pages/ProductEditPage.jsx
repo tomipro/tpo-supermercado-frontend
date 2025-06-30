@@ -3,7 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { useAuth } from "../auth/AuthProvider";
 import { useDispatch, useSelector } from "react-redux";
 import { createProducto, updateProducto } from "../redux/productosSlice";
-import { fetchCategorias } from "../redux/categoriasSlice";
+import { fetchCategorias } from "../redux/categoriesSlice";
 
 const PRODUCTO_VACIO = {
   nombre: "",
@@ -25,7 +25,9 @@ export default function ProductEditPage({ modo = "editar" }) {
   const token = useSelector((state) => state.auth.token);
   const navigate = useNavigate();
   const dispatch = useDispatch();
-  const [producto, setProducto] = useState(modo === "crear" ? PRODUCTO_VACIO : null);
+  const [producto, setProducto] = useState(
+    modo === "crear" ? PRODUCTO_VACIO : null
+  );
   const [categorias, setCategorias] = useState([]);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
@@ -39,7 +41,9 @@ export default function ProductEditPage({ modo = "editar" }) {
         if (res.status === 200) {
           setCategorias(res.data.content || res.data);
         }
-      } catch { /* empty */ }
+      } catch {
+        /* empty */
+      }
     }
     fetchCategorias();
   }, [dispatch, token]);
@@ -54,20 +58,22 @@ export default function ProductEditPage({ modo = "editar" }) {
             const data = res.data;
             // Normaliza imágenes: siempre array de objetos { url }
             const imagenesNormalizadas = Array.isArray(data.imagenes)
-              ? data.imagenes.map(img =>
-                  typeof img === "string"
-                    ? { url: img }
-                    : img && img.url
-                    ? { url: img.url }
-                    : img && img.imagen
-                    ? { url: img.imagen }
-                    : null
-                ).filter(Boolean)
+              ? data.imagenes
+                  .map((img) =>
+                    typeof img === "string"
+                      ? { url: img }
+                      : img && img.url
+                      ? { url: img.url }
+                      : img && img.imagen
+                      ? { url: img.imagen }
+                      : null
+                  )
+                  .filter(Boolean)
               : [];
             let categoria_id = "";
             if (data.categoria && categorias.length > 0) {
               // Busca el id de la categoría por nombre
-              const cat = categorias.find(c => c.nombre === data.categoria);
+              const cat = categorias.find((c) => c.nombre === data.categoria);
               categoria_id = cat ? cat.id : "";
             }
             setProducto({
@@ -142,86 +148,99 @@ export default function ProductEditPage({ modo = "editar" }) {
     e.preventDefault();
     setError("");
     setSuccess("");
-    try {        
+    try {
       const body = {
         nombre: producto.nombre,
         descripcion: producto.descripcion,
-        imagenes: producto.imagenes ? producto.imagenes.map((img) => img.url) : null,
-        precio: producto.precio === "" || producto.precio == null ? 0 : producto.precio,
-        marca: producto.marca === "" || producto.marca == null ? "Sin marca" : producto.marca,
+        imagenes: producto.imagenes
+          ? producto.imagenes.map((img) => img.url)
+          : null,
+        precio:
+          producto.precio === "" || producto.precio == null
+            ? 0
+            : producto.precio,
+        marca:
+          producto.marca === "" || producto.marca == null
+            ? "Sin marca"
+            : producto.marca,
         categoria_id: producto.categoria?.id || producto.categoria_id,
-        stock: producto.stock === "" || producto.stock == null ? 0 : producto.stock,
-        descuento: producto.descuento === "" || producto.descuento == null ? 0 : producto.descuento,
-        stockMinimo: producto.stock_minimo === "" || producto.stock_minimo == null ? 0 : producto.stock_minimo,
+        stock:
+          producto.stock === "" || producto.stock == null ? 0 : producto.stock,
+        descuento:
+          producto.descuento === "" || producto.descuento == null
+            ? 0
+            : producto.descuento,
+        stockMinimo:
+          producto.stock_minimo === "" || producto.stock_minimo == null
+            ? 0
+            : producto.stock_minimo,
         unidadMedida: producto.unidad_medida,
         estado: producto.estado,
-        ventasTotales: producto.ventas_totales === "" || producto.ventas_totales == null ? 0 : producto.ventas_totales,
+        ventasTotales:
+          producto.ventas_totales === "" || producto.ventas_totales == null
+            ? 0
+            : producto.ventas_totales,
       };
-      const res = modo === "crear"
+      const res =
+        modo === "crear"
           ? dispatch(createProducto(body))
           : dispatch(updateProducto({ id: producto.id, data: body }));
       if (res.status === 200) {
-        setSuccess(modo === "crear" ? "Producto creado correctamente." : "Producto actualizado correctamente.");
+        setSuccess(
+          modo === "crear"
+            ? "Producto creado correctamente."
+            : "Producto actualizado correctamente."
+        );
         setTimeout(() => navigate("/admin"), 1500);
       } else {
-        setError(modo === "crear" ? "No se pudo crear el producto." : "No se pudo actualizar el producto.");
+        setError(
+          modo === "crear"
+            ? "No se pudo crear el producto."
+            : "No se pudo actualizar el producto."
+        );
       }
     } catch {
       setError("Error de red.");
     }
   };
 
-  if (!producto) return (<div
-  className="mx-auto w-[600px] bg-gray-950 rounded-xl overflow-hidden drop-shadow-2xl"
->
-  <div
-    className="bg-[#202020] flex items-center p-[20px] text-white relative rounded-t-xl"
-  >
-    <div className="flex absolute left-3 space-x-2">
-      <span
-        className="h-3.5 w-3.5 bg-[#ff605c] rounded-full transition-all hover:scale-125 hover:bg-[#ff3b36]"
-      ></span>
-      <span
-        className="h-3.5 w-3.5 bg-[#ffbd44] rounded-full transition-all hover:scale-125 hover:bg-[#ffaa33]"
-      ></span>
-      <span
-        className="h-3.5 w-3.5 bg-[#2563eb] rounded-full transition-all hover:scale-125 hover:bg-[#1d4ed8]"
-      ></span>
-    </div>
+  if (!producto)
+    return (
+      <div className="mx-auto w-[600px] bg-gray-950 rounded-xl overflow-hidden drop-shadow-2xl">
+        <div className="bg-[#202020] flex items-center p-[20px] text-white relative rounded-t-xl">
+          <div className="flex absolute left-3 space-x-2">
+            <span className="h-3.5 w-3.5 bg-[#ff605c] rounded-full transition-all hover:scale-125 hover:bg-[#ff3b36]"></span>
+            <span className="h-3.5 w-3.5 bg-[#ffbd44] rounded-full transition-all hover:scale-125 hover:bg-[#ffaa33]"></span>
+            <span className="h-3.5 w-3.5 bg-[#2563eb] rounded-full transition-all hover:scale-125 hover:bg-[#1d4ed8]"></span>
+          </div>
 
-    <div
-      className="flex-1 text-center text-white font-semibold text-lg relative animate-pulse"
-    >
-      <div className="text-xl">Cargando...</div>
-    </div>
+          <div className="flex-1 text-center text-white font-semibold text-lg relative animate-pulse">
+            <div className="text-xl">Cargando...</div>
+          </div>
 
-    <div className="absolute w-full bottom-0 left-0 bg-[#333333] h-1 rounded-t-xl">
-      <div className="w-[30%] bg-[#2563eb] h-full animate-progressBar"></div>
-    </div>
-  </div>
+          <div className="absolute w-full bottom-0 left-0 bg-[#333333] h-1 rounded-t-xl">
+            <div className="w-[30%] bg-[#2563eb] h-full animate-progressBar"></div>
+          </div>
+        </div>
 
-  <div className="flex bg-[#121212] p-8 justify-center items-center h-[450px]">
-    <div className="text-center space-y-6">
-      <div
-        className="w-24 h-24 border-4 border-t-[#2563eb] border-gray-700 rounded-full animate-spin mx-auto"
-      ></div>
-      <div
-        className="text-[#2563eb] font-semibold text-4xl opacity-90 animate-fadeIn"
-      >
-        Ya casi esta listo...
+        <div className="flex bg-[#121212] p-8 justify-center items-center h-[450px]">
+          <div className="text-center space-y-6">
+            <div className="w-24 h-24 border-4 border-t-[#2563eb] border-gray-700 rounded-full animate-spin mx-auto"></div>
+            <div className="text-[#2563eb] font-semibold text-4xl opacity-90 animate-fadeIn">
+              Ya casi esta listo...
+            </div>
+            <div class="text-[#9e9e9e] text-sm opacity-80 animate-fadeIn">
+              <p>Estamos preparando todo para ti...</p>
+              <p>Por favor, espera un momento.</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="bg-[#202020] p-4 text-center text-gray-400 text-xs font-mono">
+          <p>Agradecemos tu paciencia. ¡Ya casi está!</p>
+        </div>
       </div>
-      <div class="text-[#9e9e9e] text-sm opacity-80 animate-fadeIn">
-        <p>Estamos preparando todo para ti...</p>
-        <p>Por favor, espera un momento.</p>
-      </div>
-    </div>
-  </div>
-
-  <div class="bg-[#202020] p-4 text-center text-gray-400 text-xs font-mono">
-    <p>Agradecemos tu paciencia. ¡Ya casi está!</p>
-  </div>
-</div>
-  );
+    );
 
   return (
     <div className="max-w-xl mx-auto p-6 bg-white rounded shadow">
@@ -371,7 +390,11 @@ export default function ProductEditPage({ modo = "editar" }) {
               producto.imagenes.map((img, idx) => (
                 <div key={idx} className="flex flex-col items-center mb-4">
                   <img
-                    src={typeof img === "string" ? img : img?.url || img?.imagen || ""}
+                    src={
+                      typeof img === "string"
+                        ? img
+                        : img?.url || img?.imagen || ""
+                    }
                     alt={`Imagen ${idx + 1}`}
                     className="w-40 h-40 object-cover rounded border mb-2"
                   />

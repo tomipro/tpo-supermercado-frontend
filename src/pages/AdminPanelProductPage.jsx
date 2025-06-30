@@ -3,7 +3,7 @@ import { useAuth } from "../auth/AuthProvider";
 import { useNavigate } from "react-router-dom";
 import ProductAdminListCard from "../components/ProductAdminListCard";
 import { useSelector, useDispatch } from "react-redux";
-import { fetchProducto, deleteProducto } from "../redux/productosSlice";
+import { fetchProductos, deleteProducto } from "../redux/productosSlice";
 import axios from "axios";
 import { loginThunk } from "../redux/authSlice";
 
@@ -18,12 +18,13 @@ export default function AdminPanelProductPage() {
   const [totalPages, setTotalPages] = useState(1);
   const [totalElements, setTotalElements] = useState(0);
   const navigate = useNavigate();
-  const FALLBACK_IMG = "https://cdn-icons-png.flaticon.com/512/1046/1046857.png"
+  const FALLBACK_IMG =
+    "https://cdn-icons-png.flaticon.com/512/1046/1046857.png";
 
   useEffect(() => {
     async function fetchProductos() {
       try {
-        const res = await dispatch(fetchProducto({ token, page, pageSize }));
+        const res = await dispatch(fetchProductos({ token, page, pageSize }));
         if (res.status === 200) {
           const data = res.data;
           if (Array.isArray(data.content)) {
@@ -123,7 +124,7 @@ export default function AdminPanelProductPage() {
             Mostrar:
             <select
               value={pageSize}
-              onChange={e => {
+              onChange={(e) => {
                 setPageSize(Number(e.target.value));
                 setPage(0);
               }}

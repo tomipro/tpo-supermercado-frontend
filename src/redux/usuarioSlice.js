@@ -16,6 +16,21 @@ export const fetchPerfil = createAsyncThunk(
   }
 );
 
+export const fetchUsuarios = createAsyncThunk(
+  "usuario/fetchUsuarios",
+  async (token, { rejectWithValue }) => {
+    try {
+      const res = await fetch("http://localhost:4040/usuarios", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) throw new Error("No se pudo cargar la lista de usuarios.");
+      return await res.json(); // Ajustá según lo que devuelva tu backend (array directo o {content: [...]})
+    } catch (e) {
+      return rejectWithValue(e.message || "Error al cargar usuarios.");
+    }
+  }
+);
+
 // Editar perfil de usuario
 export const updatePerfil = createAsyncThunk(
   "usuario/updatePerfil",

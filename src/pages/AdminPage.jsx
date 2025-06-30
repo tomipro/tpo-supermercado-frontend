@@ -14,10 +14,10 @@ import {
 import AdminNavbar from "../components/AdminNavbar";
 import { Outlet, useLocation } from "react-router-dom";
 import { useAuth } from "../auth/AuthProvider";
-import { useSelector, useDispatch} from "react-redux";
+import { useSelector, useDispatch } from "react-redux";
 import axios from "axios";
-import {fetchProductos} from "../redux/productosSlice";
-import { fetchUsuarios } from "../redux/usuariosSlice";
+import { fetchProductos } from "../redux/productosSlice";
+import { fetchUsuarios } from "../redux/usuarioSlice";
 
 const colores = [
   "#8884d8",
@@ -76,7 +76,8 @@ function calcularPronosticoVentas(ventasPorMes, mesesFuturos = 3) {
   for (let i = 1; i < ultimos.length; i++) {
     diffs.push(ultimos[i].ventasTotales - ultimos[i - 1].ventasTotales);
   }
-  const diffProm = diffs.length > 0 ? diffs.reduce((a, b) => a + b, 0) / diffs.length : 0;
+  const diffProm =
+    diffs.length > 0 ? diffs.reduce((a, b) => a + b, 0) / diffs.length : 0;
   const base = ultimos[ultimos.length - 1].ventasTotales;
   const baseMes = ultimos[ultimos.length - 1].mes;
   const resultado = [];
@@ -114,7 +115,8 @@ function contarProductosVendidos(ordenes) {
       if (!conteo[item.productoId]) {
         conteo[item.productoId] = {
           productoId: item.productoId,
-          nombreProducto: item.nombreProducto || item.nombre || `ID ${item.productoId}`,
+          nombreProducto:
+            item.nombreProducto || item.nombre || `ID ${item.productoId}`,
           unidadesVendidas: 0,
         };
       }
@@ -122,15 +124,17 @@ function contarProductosVendidos(ordenes) {
     });
   });
   // Ordenar por unidadesVendidas desc
-  return Object.values(conteo).sort((a, b) => b.unidadesVendidas - a.unidadesVendidas);
+  return Object.values(conteo).sort(
+    (a, b) => b.unidadesVendidas - a.unidadesVendidas
+  );
 }
 
 // Productos con stock bajo (menos de 10)
 function productosConStockBajo(productos) {
   if (!Array.isArray(productos)) return [];
   return productos
-    .filter(p => typeof p.stock === "number" && p.stock < 10)
-    .map(p => ({
+    .filter((p) => typeof p.stock === "number" && p.stock < 10)
+    .map((p) => ({
       nombreProducto: p.nombre || p.name || `ID ${p.id}`,
       stock: p.stock,
       stock_minimo: p.stock_minimo || 10,
@@ -159,7 +163,8 @@ export default function AdminPage() {
       try {
         // 1. Traer todos los usuarios (con token)
         const usuariosRes = await dispatch(fetchUsuarios());
-        if (!usuariosRes.status === 200) throw new Error("No autorizado o error al cargar usuarios.");
+        if (!usuariosRes.status === 200)
+          throw new Error("No autorizado o error al cargar usuarios.");
         const usuarios = usuariosRes.data;
         if (!Array.isArray(usuarios) || usuarios.length === 0) {
           setVentasPorDia([]);
@@ -173,9 +178,12 @@ export default function AdminPage() {
         const ordenesPorUsuario = await Promise.all(
           usuarios.map(async (u) => {
             try {
-              const r = await axios.get(`http://localhost:4040/usuarios/${u.id}/ordenes`, {
-                headers: { Authorization: `Bearer ${token}` },
-              });
+              const r = await axios.get(
+                `http://localhost:4040/usuarios/${u.id}/ordenes`,
+                {
+                  headers: { Authorization: `Bearer ${token}` },
+                }
+              );
               if (r.status !== 200) return [];
               // Si la respuesta es vacía o error 500, devolver []
               let data = null;
@@ -210,7 +218,10 @@ export default function AdminPage() {
         setVentasPorMes(ventasMes);
         setPronosticoVentas(calcularPronosticoVentas(ventasMes, 3));
         // Calcular top productos vendidos por cantidad
-        const topVendidos = contarProductosVendidos(todasLasOrdenes).slice(0, 10);
+        const topVendidos = contarProductosVendidos(todasLasOrdenes).slice(
+          0,
+          10
+        );
         setTopProductosVendidos(topVendidos);
       } catch (e) {
         setError(e.message || "Error al cargar ventas.");
@@ -227,12 +238,16 @@ export default function AdminPage() {
       try {
         const res = await dispatch(fetchProductos());
         const data = res.data;
-        const productos = Array.isArray(data.content) ? data.content : Array.isArray(data) ? data : [];
+        const productos = Array.isArray(data.content)
+          ? data.content
+          : Array.isArray(data)
+          ? data
+          : [];
         // Top productos más vendidos
         const productosOrdenados = [...productos]
           .sort((a, b) => (b.ventas_totales || 0) - (a.ventas_totales || 0))
           .slice(0, 10)
-          .map(p => ({
+          .map((p) => ({
             nombreProducto: p.nombre,
             unidadesVendidas: p.ventas_totales || 0,
           }));
@@ -261,11 +276,15 @@ export default function AdminPage() {
           {/* Cajita de ventas totales */}
           <div className="col-span-1 md:col-span-2 flex gap-6 mb-4">
             <div className="flex-1 bg-white rounded-xl shadow p-6 flex flex-col items-center justify-center border border-blue-100 min-h-[110px]">
-              <div className="text-lg font-semibold text-gray-700 mb-1">Órdenes totales</div>
+              <div className="text-lg font-semibold text-gray-700 mb-1">
+                Órdenes totales
+              </div>
               {loading || totalOrdenes === null ? (
                 <div className="h-10 w-24 bg-gray-200 rounded animate-pulse mt-2" />
               ) : (
-                <div className="text-4xl font-extrabold text-primary">{totalOrdenes}</div>
+                <div className="text-4xl font-extrabold text-primary">
+                  {totalOrdenes}
+                </div>
               )}
             </div>
           </div>
@@ -342,8 +361,13 @@ export default function AdminPage() {
 
           {/* Top Productos Vendidos por cantidad */}
           <div className="bg-white rounded p-4 shadow col-span-1 md:col-span-2">
-            <h3 className="font-semibold mb-2">Top Productos Más Vendidos (por unidades)</h3>
-            <ResponsiveContainer width="100%" height={40 + 40 * topProductosVendidos.length}>
+            <h3 className="font-semibold mb-2">
+              Top Productos Más Vendidos (por unidades)
+            </h3>
+            <ResponsiveContainer
+              width="100%"
+              height={40 + 40 * topProductosVendidos.length}
+            >
               <BarChart
                 layout="vertical"
                 data={topProductosVendidos}
@@ -366,12 +390,14 @@ export default function AdminPage() {
 
           {/* Productos con Stock Bajo */}
           <div className="bg-white rounded p-4 shadow col-span-1 md:col-span-2">
-            <h3 className="font-semibold mb-2">Productos con Stock Bajo (&lt; 10)</h3>
-            <ResponsiveContainer width="100%" height={Math.max(300, 40 + 40 * productosStockBajo.length)}>
-              <BarChart
-                layout="vertical"
-                data={productosStockBajo}
-              >
+            <h3 className="font-semibold mb-2">
+              Productos con Stock Bajo (&lt; 10)
+            </h3>
+            <ResponsiveContainer
+              width="100%"
+              height={Math.max(300, 40 + 40 * productosStockBajo.length)}
+            >
+              <BarChart layout="vertical" data={productosStockBajo}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis type="number" />
                 <YAxis
@@ -383,7 +409,11 @@ export default function AdminPage() {
                 />
                 <Tooltip formatter={(value) => `${value} unidades`} />
                 <Bar dataKey="stock" fill={colores[4]} name="Stock Actual" />
-                <Bar dataKey="stock_minimo" fill={colores[5]} name="Stock Mínimo" />
+                <Bar
+                  dataKey="stock_minimo"
+                  fill={colores[5]}
+                  name="Stock Mínimo"
+                />
               </BarChart>
             </ResponsiveContainer>
           </div>

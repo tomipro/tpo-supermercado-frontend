@@ -2,10 +2,10 @@ import { useEffect, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import ProductCard from "../components/ProductCard";
 import { useAuth } from "../auth/AuthProvider";
-import { useDispatch, useSelector } from "react-redux";
 import { fetchCarrito, patchCarrito } from "../redux/cartSlice";
 import { fetchProductos } from "../redux/productosSlice";
-
+import { useDispatch, useSelector } from "react-redux";
+import { fetchCategorias } from "../redux/categoriesSlice";
 
 const SORT_OPTIONS = [
   { value: "relevancia", label: "Relevancia" },
@@ -194,6 +194,7 @@ function useQueryParam(name) {
 }
 
 export default function BuscarPage() {
+  const categoriasRedux = useSelector((state) => state.categorias.categorias);
   const categoriaIdParam = useQueryParam("categoriaId");
   const token = useSelector((state) => state.auth.token);
   const dispatch = useDispatch();
@@ -217,48 +218,36 @@ export default function BuscarPage() {
 
   const [page, setPage] = useState(0);
   const [pageSize, setPageSize] = useState(12);
-  // Si hay un ID de categoría en la URL, lo agregamos a los filtros
+  // Usá Redux para cargar categorías al montar
   useEffect(() => {
-    if (categoriaIdParam && categoriasApi.length > 0) {
-      // Solo agregá el ID de la categoría principal
-      setCategorias([String(categoriaIdParam)]);
-      setPage(0); // opcional: resetea la página al cambiar filtro
-    }
-    // Solo corre cuando cambian estos valores
-  }, [categoriaIdParam, categoriasApi]);
+    dispatch(fetchCategorias());
+  }, [dispatch]);
 
-  // Fetch categorías desde el backend
+  // Usá las categorías del store para armar categoriasApi
   useEffect(() => {
-    async function fetchCategorias() {
-      try {
-        const res = await fetch("http://localhost:4040/categorias");
-        const data = await res.json();
-        // Solo categorías principales (parentId === null)
-        setCategoriasApi(
-          Array.isArray(data.content)
-            ? data.content.filter((cat) => cat.parentId === null)
-            : []
-        );
-      } catch (err) {
-        setCategoriasApi([]);
-      }
-    }
-    fetchCategorias();
-  }, []);
+    // Solo categorías principales (parentId === null)
+    setCategoriasApi(
+      Array.isArray(categoriasRedux)
+        ? categoriasRedux.filter((cat) => cat.parentId === null)
+        : []
+    );
+  }, [categoriasRedux]);
 
   // Fetch productos del backend paginado
   useEffect(() => {
-    dispatch(fetchProductos({
-      nombre: query,
-      categoriaId: categorias[0],
-      subcategoriaId: subcategorias.join(","),
-      marca: marcas.join(","),
-      precioMin,
-      precioMax,
-      page,
-      size: pageSize,
-      promo,
-    }));
+    dispatch(
+      fetchProductos({
+        nombre: query,
+        categoriaId: categorias[0] || categoriaIdParam,
+        subcategoriaId: subcategorias.join(","),
+        marca: marcas.join(","),
+        precioMin,
+        precioMax,
+        page,
+        size: pageSize,
+        promo,
+      })
+    );
     // eslint-disable-next-line
   }, [
     query,
@@ -357,7 +346,9 @@ export default function BuscarPage() {
         marcasSet.add(p.marca.trim());
       }
     });
-    setMarcasDisponibles(Array.from(marcasSet).sort((a, b) => a.localeCompare(b)));
+    setMarcasDisponibles(
+      Array.from(marcasSet).sort((a, b) => a.localeCompare(b))
+    );
   }, [productosRedux]);
 
   return (
