@@ -1,66 +1,27 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import { useAuth } from "../auth/AuthProvider";
+import { useDispatch, useSelector } from "react-redux";
+import { loginThunk, clearAuthError } from "../redux/authSlice";
 
 export default function SignInPage() {
   const [usuario, setUsuario] = useState("");
   const [password, setPassword] = useState("");
-  const { login } = useAuth();
+  const dispatch = useDispatch();
   const navigate = useNavigate();
-  const [errorMsg, setErrorMsg] = useState("");
-  const [backendError, setBackendError] = useState(false);
+  const { loading, error, isAuthenticated } = useSelector((state) => state.auth);
+
+  useEffect(() => {
+    if (isAuthenticated) navigate("/");
+  }, [isAuthenticated, navigate]);
+
+  useEffect(() => {
+    return () => dispatch(clearAuthError());
+  }, [dispatch]);
 
   const handleLogin = async (e) => {
     e.preventDefault();
-    setBackendError(false);
-    setErrorMsg("");
-    try {
-      const res = await fetch("http://localhost:4040/usuarios/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          username: usuario,
-          password: password,
-        }),
-      });
-
-      if (res.ok) {
-        const data = await res.json();
-        const { token, usuario } = data;
-        login({ jwt: token, usuario });
-        navigate("/");
-      } else {
-        const contentType = res.headers.get("content-type");
-        if (contentType && contentType.includes("application/json")) {
-          const errorJson = await res.json();
-          setErrorMsg(errorJson.mensaje || "Error desconocido.");
-        } else {
-          const errorMsg = await res.text();
-          setErrorMsg(errorMsg || "Error desconocido.");
-        }
-      }
-    } catch (error) {
-      setBackendError(true);
-    }
+    dispatch(loginThunk({ username: usuario, password }));
   };
-
-  if (backendError) {
-    return (
-      <div className="flex flex-col items-center justify-center mt-20">
-        <h2 className="text-2xl font-bold mb-4 text-red-600">
-          ¡El sistema se cayó!
-        </h2>
-        <img
-          src="https://pbs.twimg.com/media/DppUek3UUAEciTl.jpg"
-          alt="Error gracioso"
-          className="w-80 rounded shadow"
-        />
-        <p className="mt-4 text-gray-600">
-          Parece que el backend no está disponible.
-        </p>
-      </div>
-    );
-  }
 
   return (
     <div
@@ -115,9 +76,9 @@ export default function SignInPage() {
         >
           Iniciar sesión
         </button>
-        {errorMsg && (
+        {error && (
           <div className="bg-red-100 text-red-700 p-2 rounded mt-3">
-            {errorMsg}
+            {error}
           </div>
         )}
         <p className="mt-4 text-center text-sm text-gray-500">

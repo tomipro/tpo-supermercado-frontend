@@ -9,7 +9,7 @@ import {
 } from "../redux/direccionesSlice";
 
 export default function MisDireccionesPage() {
-  const { token } = useAuth();
+  const token = useSelector((state) => state.auth.token);
   const dispatch = useDispatch();
   const direccionesState = useSelector((state) => state.direcciones);
   const direcciones = direccionesState?.direcciones || [];

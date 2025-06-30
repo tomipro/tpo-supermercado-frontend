@@ -2,9 +2,11 @@ import { useEffect, useState } from "react";
 import { useAuth } from "../auth/AuthProvider";
 import { useNavigate } from "react-router-dom";
 import ProductAdminListCard from "../components/ProductAdminListCard";
+import { useSelector } from "react-redux";
 
 export default function AdminPanelProductPage() {
-  const { usuario, token } = useAuth();
+  const { usuario } = useAuth();
+  const token = useSelector((state) => state.auth.token);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [productos, setProductos] = useState([]);

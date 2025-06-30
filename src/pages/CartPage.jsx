@@ -1,16 +1,10 @@
 import { useEffect, useState } from "react";
-import { useAuth } from "../auth/AuthProvider";
 import { Link, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { FaTrash, FaPlus, FaMinus, FaShoppingCart } from "react-icons/fa";
 import dinoPensativo from "../assets/dino_pensativo.png";
 import { useSelector, useDispatch } from "react-redux";
-import {
-  fetchCarrito,
-  patchCarrito,
-  deleteCarrito,
-  deleteAllCarrito,
-} from "../redux/cartSlice";
+import { fetchCarrito, patchCarrito, deleteCarrito, deleteAllCarrito } from "../redux/cartSlice";
 
 // Muestra un mensaje  y imagen del dino cuando el carrito está vacío
 function CarritoVacio() {
@@ -64,9 +58,9 @@ export default function CartPage() {
   const carrito = useSelector((state) => state.cart.carrito);
   const loading = useSelector((state) => state.cart.loading);
   const error = useSelector((state) => state.cart.error);
+  const token = useSelector((state) => state.auth.token);
   const dispatch = useDispatch();
   const [imagenesProductos, setImagenesProductos] = useState({});
-  const { token } = useAuth();
   const navigate = useNavigate();
 
   useEffect(() => {

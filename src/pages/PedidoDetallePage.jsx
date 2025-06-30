@@ -3,11 +3,13 @@ import { useEffect, useState } from "react";
 import jsPDF from "jspdf";
 import html2canvas from "html2canvas";
 import { useAuth } from "../auth/AuthProvider";
+import { useSelector } from "react-redux";
 
 export default function PedidoDetallePage() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { token, usuario } = useAuth();
+  const token = useSelector((state) => state.auth.token);
+  const usuario = useSelector((state) => state.auth.usuario);
   const [pedido, setPedido] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");

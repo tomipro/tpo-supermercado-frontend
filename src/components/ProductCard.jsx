@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom'
 import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useAuth } from '../auth/AuthProvider'
+import { useSelector } from "react-redux";
 
 export default function ProductCard({
   id,
@@ -18,7 +19,9 @@ export default function ProductCard({
   added: addedProp,
   units: unitsProp,
 }) {
-  const { token } = useAuth();
+  const token = useSelector((state) => state.auth.token);
+  const usuario = useSelector((state) => state.auth.usuario);
+  const isAuthenticated = useSelector((state) => state.auth.isAuthenticated);
   const slug = name.toLowerCase().replace(/\s+/g, '-').replace(/[^\w-]/g, '')
   const [units, setUnits] = useState(unitsProp || 0)
   const [loading, setLoading] = useState(false)
@@ -47,6 +50,16 @@ export default function ProductCard({
     setUnits(units + 1)
     setLoading(false)
   }
+
+  const handleAddToCart = () => {
+    if (!isAuthenticated) {
+      // Mostrar modal o redirigir a login
+      // ...
+      return;
+    }
+    // Usar token para agregar al carrito
+    dispatch(addToCartThunk({ token, productoId, cantidad }));
+  };
 
   return (
     <div

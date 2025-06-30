@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useAuth } from "../auth/AuthProvider";
+import { useSelector } from "react-redux";
 
 const PRODUCTO_VACIO = {
   nombre: "",
@@ -19,7 +20,7 @@ const PRODUCTO_VACIO = {
 
 export default function ProductEditPage({ modo = "editar" }) {
   const { id } = useParams();
-  const { token } = useAuth();
+  const token = useSelector((state) => state.auth.token);
   const navigate = useNavigate();
   const [producto, setProducto] = useState(modo === "crear" ? PRODUCTO_VACIO : null);
   const [categorias, setCategorias] = useState([]);

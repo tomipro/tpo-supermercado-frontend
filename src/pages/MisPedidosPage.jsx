@@ -1,9 +1,10 @@
 import { Link } from "react-router-dom";
 import { useEffect, useState } from "react";
-import { useAuth } from "../auth/AuthProvider";
+import { useSelector } from "react-redux";
 
 export default function MisPedidosPage() {
-  const { token, usuario } = useAuth();
+  const token = useSelector((state) => state.auth.token);
+  const usuario = useSelector((state) => state.auth.usuario);
   const [pedidos, setPedidos] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");

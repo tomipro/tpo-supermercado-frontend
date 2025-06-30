@@ -6,13 +6,14 @@ import {
   updatePerfil,
   clearUsuarioMsg,
 } from "../redux/usuarioSlice";
+import { logoutThunk } from "../redux/authSlice";
 import { useNavigate } from "react-router-dom";
 import formatearFecha from "./formatearFecha.jsx";
 
 export default function ProfilePage() {
-  const { token, usuario, logout } = useAuth();
   const dispatch = useDispatch();
   const navigate = useNavigate();
+  const { token, usuario, isAuthenticated } = useSelector((state) => state.auth);
   const usuarioState = useSelector((state) => state.usuario);
   const perfil = usuarioState?.perfil;
   const loading = usuarioState?.loading;
@@ -64,7 +65,7 @@ export default function ProfilePage() {
     return (
       <div className="mt-10 text-center text-red-600">
         {error || "No se pudo cargar el perfil."}
-        <button className="ml-4 underline" onClick={logout}>
+        <button className="ml-4 underline" onClick={() => dispatch(logoutThunk())}>
           Volver a iniciar sesión
         </button>
       </div>

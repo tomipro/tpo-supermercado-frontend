@@ -14,6 +14,7 @@ import {
 import AdminNavbar from "../components/AdminNavbar";
 import { Outlet, useLocation } from "react-router-dom";
 import { useAuth } from "../auth/AuthProvider";
+import { useSelector } from "react-redux";
 
 const colores = [
   "#8884d8",
@@ -137,7 +138,7 @@ function productosConStockBajo(productos) {
 export default function AdminPage() {
   const location = useLocation();
   const isAdminRoot = location.pathname === "/admin";
-  const { token } = useAuth();
+  const token = useSelector((state) => state.auth.token);
 
   const [ventasPorDia, setVentasPorDia] = useState([]);
   const [ventasPorMes, setVentasPorMes] = useState([]);

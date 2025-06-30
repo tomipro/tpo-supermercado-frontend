@@ -8,10 +8,9 @@ import { useSelector, useDispatch } from "react-redux";
 import { fetchCarrito } from "../redux/cartSlice";
 
 export default function FinalizarCompraPage() {
-  // Hook de autenticación, trae el token del usuario logueado
-  const { token } = useAuth();
   const dispatch = useDispatch();
   const carrito = useSelector((state) => state.cart.carrito);
+  const token = useSelector((state) => state.auth.token);
 
   // Estados principales del flujo de compra
   const [direcciones, setDirecciones] = useState([]); // Direcciones guardadas del usuario

@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
 import ProductCard from "../components/ProductCard";
 import { useAuth } from "../auth/AuthProvider";
-import { useDispatch } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import { fetchCarrito, patchCarrito } from "../redux/cartSlice";
 
 
@@ -194,7 +194,7 @@ function useQueryParam(name) {
 
 export default function BuscarPage() {
   const categoriaIdParam = useQueryParam("categoriaId");
-  const { token } = useAuth();
+  const token = useSelector((state) => state.auth.token);
   const dispatch = useDispatch();
   const searchParam = useQueryParam("search");
   const [query, setQuery] = useState(searchParam);

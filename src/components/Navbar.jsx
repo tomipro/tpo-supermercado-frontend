@@ -1,8 +1,9 @@
 import { Link, NavLink, useNavigate } from "react-router-dom";
 import { useState, useEffect, useRef, useMemo } from "react";
-import { useAuth } from "../auth/AuthProvider";
 import { useSelector, useDispatch } from "react-redux";
 import { fetchCategorias } from "../redux/categoriesSlice";
+import { logoutThunk } from "../redux/authSlice";
+import { fetchCarrito } from "../redux/cartSlice";
 import DolarCotizacion from "../components/DolarCotizacion";
 import dinoLogo from "../assets/dino_logo.png";
 
@@ -15,7 +16,9 @@ export default function Navbar() {
   const [mobileDropdown, setMobileDropdown] = useState(null);
   const [userDropdown, setUserDropdown] = useState(false);
   const userDropdownRef = useRef(null);
-  const { usuario, isAuthenticated, logout } = useAuth();
+  const usuario = useSelector((state) => state.auth.usuario);
+  const token = useSelector((state) => state.auth.token);
+  const isAuthenticated = useSelector((state) => state.auth.isAuthenticated);
   const carrito = useSelector((state) => state.cart.carrito);
   const loading = useSelector((state) => state.cart.loading);
   const categoriasState = useSelector((state) => state.categorias);
@@ -58,6 +61,14 @@ export default function Navbar() {
     dispatch(fetchCategorias());
     // eslint-disable-next-line
   }, []);
+
+  // Fetch del carrito al iniciar sesión o hidratar token
+  useEffect(() => {
+    if (token && isAuthenticated) {
+      dispatch(fetchCarrito(token));
+    }
+    // eslint-disable-next-line
+  }, [token, isAuthenticated, dispatch]);
 
   // Memoiza el dropdown para evitar loops y rerenders innecesarios
   const categoriesDropdown = useMemo(() => {
@@ -543,7 +554,7 @@ export default function Navbar() {
                     <button
                       onClick={() => {
                         setUserDropdown(false);
-                        logout();
+                        dispatch(logoutThunk());
                       }}
                       className="block w-full text-left px-4 py-2 text-red-600 hover:bg-red-50 hover:text-red-700 rounded transition font-semibold"
                     >

@@ -1,8 +1,8 @@
 import { useState } from "react";
-import { useAuth } from "../auth/AuthProvider";
+import { useSelector } from "react-redux";
 
 export default function ResetPasswordPageLog() {
-  const { token } = useAuth();
+  const token = useSelector((state) => state.auth.token);
   const [oldPassword, setOldPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [msg, setMsg] = useState("");
