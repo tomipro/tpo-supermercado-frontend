@@ -92,7 +92,7 @@ const productosSlice = createSlice({
   name: "productos",
   initialState: {
     productos: [],
-    productoDetalle: null,      // <--- Agregá esto
+    productoDetalle: null,     
     loading: false,
     error: "",
   },
