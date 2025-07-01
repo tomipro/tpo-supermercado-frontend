@@ -36,17 +36,20 @@ export default function CategoryEditPage({ modo = "editar" }) {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
 
-  // Mueve estas funciones fuera del useEffect para poder usarlas en los handlers
-  async function fetchCategoria() {
+  // Carga una sola categoría por ID (solo en modo editar)
+  async function fetchCategoriaById() {
     try {
-      const res = await dispatch(fetchCategorias({ id, token }));
-      if (res.status === 200) {
-        const data = res.data;
-        setCategoria(data);
-        setNombre(data.nombre);
-        setParentId(data.parentCategoria?.id || "");
-        setSubcategorias(data.subcategorias || []);
-      }
+      const res = await fetch(`http://localhost:4040/categorias/${id}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      if (!res.ok) throw new Error();
+      const data = await res.json();
+      setCategoria(data);
+      setNombre(data.nombre);
+      setParentId(data.parentCategoria?.id || "");
+      setSubcategorias(data.subcategorias || []);
     } catch {
       setError("No se pudo cargar la categoría.");
     }
@@ -55,7 +58,8 @@ export default function CategoryEditPage({ modo = "editar" }) {
   // Carga inicial
   useEffect(() => {
     dispatch(fetchCategorias());
-    if (modo === "editar") fetchCategoria();
+    if (modo === "editar") fetchCategoriaById();
+    // eslint-disable-next-line
   }, [dispatch, id, token, modo]);
 
   // Handlers básicos

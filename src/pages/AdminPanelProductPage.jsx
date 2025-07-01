@@ -22,36 +22,66 @@ export default function AdminPanelProductPage() {
     "https://cdn-icons-png.flaticon.com/512/1046/1046857.png";
 
   useEffect(() => {
-    async function fetchProductos() {
+    async function cargarProductos() {
+      setError("");
       try {
-        const res = await dispatch(fetchProductos({ token, page, pageSize }));
-        if (res.status === 200) {
-          const data = res.data;
-          if (Array.isArray(data.content)) {
-            setProductos(data.content);
-            setTotalPages(data.totalPages || 1);
-            setTotalElements(data.totalElements || data.content.length || 0);
-          } else {
-            setProductos([]);
-            setTotalPages(1);
-            setTotalElements(0);
-          }
+        // Llama al thunk correctamente y accede a res.payload
+        const res = await dispatch(fetchProductos({ page, size: pageSize }));
+        const data = res.payload;
+        if (data && Array.isArray(data.content)) {
+          setProductos(data.content);
+          setTotalPages(data.totalPages || 1);
+          setTotalElements(data.totalElements || data.content.length || 0);
+        } else if (Array.isArray(data)) {
+          setProductos(data);
+          setTotalPages(1);
+          setTotalElements(data.length || 0);
         } else {
-          setError("No se pudieron cargar los productos.");
+          setProductos([]);
+          setTotalPages(1);
+          setTotalElements(0);
         }
       } catch (e) {
         setError("Error de red al cargar productos.");
       }
     }
-    fetchProductos();
-  }, [dispatch, token, page, pageSize]);
+    cargarProductos();
+  }, [dispatch, page, pageSize]);
 
   const handleEdit = (producto) => {
     navigate(`/editar-producto/${producto.id}`);
   };
 
   const handleDelete = async (producto) => {
-    dispatch(deleteProducto({ id: producto.id, token }));
+    try {
+      const res = await dispatch(deleteProducto({ id: producto.id, token }));
+      if (res && res.meta && res.meta.requestStatus === "fulfilled") {
+        setSuccess("Producto eliminado correctamente.");
+        setTimeout(() => {
+          setSuccess("");
+          dispatch(fetchProductos({ page, size: pageSize })).then((r) => {
+            const data = r.payload;
+            if (data && Array.isArray(data.content)) {
+              setProductos(data.content);
+              setTotalPages(data.totalPages || 1);
+              setTotalElements(data.totalElements || data.content.length || 0);
+            } else if (Array.isArray(data)) {
+              setProductos(data);
+              setTotalPages(1);
+              setTotalElements(data.length || 0);
+            } else {
+              setProductos([]);
+              setTotalPages(1);
+              setTotalElements(0);
+            }
+          });
+        }, 500);
+      } else {
+        setError("No se pudo eliminar el producto.");
+      }
+    } catch {
+      setError("Error de red al eliminar producto.");
+    }
   };
 
   const handleCreate = () => {

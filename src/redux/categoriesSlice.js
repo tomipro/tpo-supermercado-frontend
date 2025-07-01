@@ -116,12 +116,19 @@ const categoriesSlice = createSlice({
       .addCase(addCategoria.rejected, (state, action) => {
         state.error = action.payload;
       })
+      .addCase(editCategoria.pending, (state) => {
+        state.loading = true;
+        state.error = "";
+        state.success = "";
+      })
       .addCase(editCategoria.fulfilled, (state, action) => {
+        state.loading = false;
         const idx = state.categorias.findIndex((c) => c.id === action.payload.id);
         if (idx !== -1) state.categorias[idx] = action.payload;
         state.success = "Categoría actualizada correctamente.";
       })
       .addCase(editCategoria.rejected, (state, action) => {
+        state.loading = false;
         state.error = action.payload;
       })
       .addCase(deleteCategoria.fulfilled, (state, action) => {

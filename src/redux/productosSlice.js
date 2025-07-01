@@ -49,9 +49,13 @@ export const fetchProductoById = createAsyncThunk(
 
 export const deleteProducto = createAsyncThunk(
   "productos/deleteProducto",
-  async (id, { rejectWithValue }) => {
+  async ({ id, token }, { rejectWithValue }) => {
     try {
-      const res = await axios.delete(`http://localhost:4040/producto/${id}`);
+      const res = await axios.delete(`http://localhost:4040/producto/${id}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
       if (res.status === 200) {
         return id;
       }
@@ -63,12 +67,22 @@ export const deleteProducto = createAsyncThunk(
 
 export const createProducto = createAsyncThunk(
   "productos/createProducto",
-  async (data, { rejectWithValue }) => {
+  async ({ data, token }, { rejectWithValue }) => {
     try {
-      const res = await axios.post(`http://localhost:4040/producto`, data);
+      const res = await axios.post(
+        `http://localhost:4040/producto`,
+        data,
+        {
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
       if (res.status === 201) {
         return res.data;
       }
+      throw new Error("No se pudo crear el producto.");
     } catch (e) {
       return rejectWithValue(e.message || "Error al crear producto.");
     }
@@ -77,9 +91,18 @@ export const createProducto = createAsyncThunk(
 
 export const updateProducto = createAsyncThunk(
   "productos/updateProducto",
-  async ({ id, data }, { rejectWithValue }) => {
+  async ({ id, data, token }, { rejectWithValue }) => {
     try {
-      const res = await axios.put(`http://localhost:4040/producto/${id}`, data);
+      const res = await axios.put(
+        `http://localhost:4040/producto/${id}`,
+        data,
+        {
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
       if (res.status === 200) {
         return res.data;
       }

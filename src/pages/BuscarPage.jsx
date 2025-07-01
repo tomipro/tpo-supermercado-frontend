@@ -199,6 +199,7 @@ export default function BuscarPage() {
   const token = useSelector((state) => state.auth.token);
   const dispatch = useDispatch();
   const productosRedux = useSelector((state) => state.productos.productos);
+  const paginacion = useSelector((state) => state.productos.paginacion);
   const loading = useSelector((state) => state.productos.loading);
   const error = useSelector((state) => state.productos.error);
   const searchParam = useQueryParam("search");
@@ -232,6 +233,75 @@ export default function BuscarPage() {
         : []
     );
   }, [categoriasRedux]);
+
+  // Estado para todos los productos en promo (cuando el filtro está activo)
+  const [allPromoProducts, setAllPromoProducts] = useState([]);
+  const [loadingPromo, setLoadingPromo] = useState(false);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalElements, setTotalElements] = useState(0);
+
+  // Fetch productos del backend paginado SOLO si promo está activo
+  useEffect(() => {
+    let cancelled = false;
+    async function fetchAllPromoProducts() {
+      setLoadingPromo(true);
+      let all = [];
+      let currentPage = 0;
+      let totalPagesBackend = 1;
+      while (currentPage < totalPagesBackend && !cancelled) {
+        const res = await dispatch(
+          fetchProductos({
+            nombre: query,
+            categoriaId: categorias[0] || categoriaIdParam,
+            subcategoriaId: subcategorias.join(","),
+            marca: marcas.join(","),
+            precioMin,
+            precioMax,
+            page: currentPage,
+            size: 48, // traer más por página para menos requests
+          })
+        );
+        const data = res.payload;
+        let productos = [];
+        if (data && Array.isArray(data.content)) {
+          productos = data.content;
+          totalPagesBackend = data.totalPages || 1;
+        } else if (Array.isArray(data)) {
+          productos = data;
+          totalPagesBackend = 1;
+        }
+        all = all.concat(productos);
+        currentPage++;
+      }
+      if (!cancelled) {
+        setAllPromoProducts(
+          all.filter((p) => Number(p.descuento) > 0 && Number(p.stock) > 0)
+        );
+        setLoadingPromo(false);
+      }
+    }
+
+    if (promo) {
+      setAllPromoProducts([]);
+      fetchAllPromoProducts();
+    } else {
+      setAllPromoProducts([]);
+    }
+
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line
+  }, [
+    promo,
+    query,
+    marcas,
+    categorias,
+    subcategorias,
+    precioMin,
+    precioMax,
+    categoriaIdParam,
+  ]);
 
   // Fetch productos del backend paginado
   useEffect(() => {
@@ -273,19 +343,61 @@ export default function BuscarPage() {
     .map((sub) => ({ id: String(sub.id), nombre: sub.nombre }))
     .filter((v, i, arr) => arr.findIndex((x) => x.id === v.id) === i);
 
-  // Solo productos con stock > 0 y, si promo está activo, descuento > 0
-  const productosFiltrados = [...productosRedux]
-    .filter((p) => Number(p.stock) > 0)
-    .filter((p) => !promo || Number(p.descuento) > 0)
-    .sort((a, b) => {
-      if (sortBy === "precio-asc") return a.precio - b.precio;
-      if (sortBy === "precio-desc") return b.precio - a.precio;
-      if (sortBy === "nombre-asc")
-        return (a.nombre || "").localeCompare(b.nombre || "");
-      if (sortBy === "nombre-desc")
-        return (b.nombre || "").localeCompare(a.nombre || "");
-      return 0;
+  // Solo productos con stock > 0
+  const productosFiltrados = promo
+    ? [...allPromoProducts]
+        .sort((a, b) => {
+          if (sortBy === "precio-asc") return a.precio - b.precio;
+          if (sortBy === "precio-desc") return b.precio - a.precio;
+          if (sortBy === "nombre-asc")
+            return (a.nombre || "").localeCompare(b.nombre || "");
+          if (sortBy === "nombre-desc")
+            return (b.nombre || "").localeCompare(a.nombre || "");
+          return 0;
+        })
+        .slice(page * pageSize, (page + 1) * pageSize)
+    : [...productosRedux]
+        .filter((p) => Number(p.stock) > 0)
+        .sort((a, b) => {
+          if (sortBy === "precio-asc") return a.precio - b.precio;
+          if (sortBy === "precio-desc") return b.precio - a.precio;
+          if (sortBy === "nombre-asc")
+            return (a.nombre || "").localeCompare(b.nombre || "");
+          if (sortBy === "nombre-desc")
+            return (b.nombre || "").localeCompare(a.nombre || "");
+          return 0;
+        });
+
+  // Paginación
+  useEffect(() => {
+    if (promo) {
+      setTotalElements(allPromoProducts.length);
+      setTotalPages(Math.ceil(allPromoProducts.length / pageSize) || 1);
+      setPage(0);
+    } else {
+      if (paginacion && typeof paginacion.totalPages === "number") {
+        setTotalPages(paginacion.totalPages);
+        setTotalElements(paginacion.totalElements);
+      } else if (Array.isArray(productosRedux)) {
+        setTotalPages(1);
+        setTotalElements(productosRedux.length);
+      }
+    }
+    // eslint-disable-next-line
+  }, [allPromoProducts, productosRedux, pageSize, promo, paginacion]);
+
+  // Nuevo useEffect para recalcular marcas disponibles
+  useEffect(() => {
+    const marcasSet = new Set();
+    productosRedux.forEach((p) => {
+      if (p.marca && typeof p.marca === "string" && p.marca.trim() !== "") {
+        marcasSet.add(p.marca.trim());
+      }
     });
+    setMarcasDisponibles(
+      Array.from(marcasSet).sort((a, b) => a.localeCompare(b))
+    );
+  }, [productosRedux]);
 
   function handleMarcaChange(marca) {
     setMarcas((marcas) =>
@@ -333,23 +445,6 @@ export default function BuscarPage() {
     setAddedId(id);
     setTimeout(() => setAddedId(null), 1200);
   };
-
-  // Paginación
-  const [totalPages, setTotalPages] = useState(1);
-  const [totalElements, setTotalElements] = useState(0);
-
-  // Nuevo useEffect para recalcular marcas disponibles
-  useEffect(() => {
-    const marcasSet = new Set();
-    productosRedux.forEach((p) => {
-      if (p.marca && typeof p.marca === "string" && p.marca.trim() !== "") {
-        marcasSet.add(p.marca.trim());
-      }
-    });
-    setMarcasDisponibles(
-      Array.from(marcasSet).sort((a, b) => a.localeCompare(b))
-    );
-  }, [productosRedux]);
 
   return (
     <div className="w-full max-w-[1600px] mx-auto px-2 sm:px-6 py-8">

@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useAuth } from "../auth/AuthProvider";
 import { useDispatch, useSelector } from "react-redux";
-import { createProducto, updateProducto } from "../redux/productosSlice";
+import { createProducto, updateProducto, fetchProductoById } from "../redux/productosSlice";
 import { fetchCategorias } from "../redux/categoriesSlice";
 
 const PRODUCTO_VACIO = {
@@ -29,53 +29,64 @@ export default function ProductEditPage({ modo = "editar" }) {
     modo === "crear" ? PRODUCTO_VACIO : null
   );
   const [categorias, setCategorias] = useState([]);
+  const [categoriasCargadas, setCategoriasCargadas] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [nuevaImagen, setNuevaImagen] = useState("");
 
   // Cargar categorías al montar
   useEffect(() => {
-    async function fetchCategorias() {
+    async function fetchCategoriasAsync() {
       try {
         const res = await dispatch(fetchCategorias());
-        if (res.status === 200) {
-          setCategorias(res.data.content || res.data);
+        // Redux Toolkit: el resultado está en res.payload
+        const data = res.payload;
+        if (Array.isArray(data?.content)) {
+          setCategorias(data.content);
+        } else if (Array.isArray(data)) {
+          setCategorias(data);
+        } else {
+          setCategorias([]);
         }
+        setCategoriasCargadas(true);
       } catch {
-        /* empty */
+        setCategorias([]);
+        setCategoriasCargadas(true);
       }
     }
-    fetchCategorias();
-  }, [dispatch, token]);
+    fetchCategoriasAsync();
+  }, [dispatch]);
 
-  // Solo buscar producto si es modo editar
+  // Solo buscar producto si es modo editar y categorías ya cargadas
   useEffect(() => {
-    if (modo === "editar") {
-      async function fetchProducto() {
-        try {
-          const res = await dispatch(fetchProducto({ id, token }));
-          if (res.status === 200) {
-            const data = res.data;
-            // Normaliza imágenes: siempre array de objetos { url }
-            const imagenesNormalizadas = Array.isArray(data.imagenes)
-              ? data.imagenes
-                  .map((img) =>
-                    typeof img === "string"
-                      ? { url: img }
-                      : img && img.url
-                      ? { url: img.url }
-                      : img && img.imagen
-                      ? { url: img.imagen }
-                      : null
-                  )
-                  .filter(Boolean)
-              : [];
-            let categoria_id = "";
-            if (data.categoria && categorias.length > 0) {
-              // Busca el id de la categoría por nombre
-              const cat = categorias.find((c) => c.nombre === data.categoria);
-              categoria_id = cat ? cat.id : "";
-            }
+    if (modo !== "editar" || !categoriasCargadas) return;
+    let cancelado = false;
+    async function fetchProducto() {
+      try {
+        const res = await dispatch(fetchProductoById(id));
+        const data = res.payload;
+        if (data) {
+          // Normaliza imágenes: siempre array de objetos { url }
+          const imagenesNormalizadas = Array.isArray(data.imagenes)
+            ? data.imagenes
+                .map((img) =>
+                  typeof img === "string"
+                    ? { url: img }
+                    : img && img.url
+                    ? { url: img.url }
+                    : img && img.imagen
+                    ? { url: img.imagen }
+                    : null
+                )
+                .filter(Boolean)
+            : [];
+          let categoria_id = "";
+          if (data.categoria && categorias.length > 0) {
+            // Busca el id de la categoría por nombre
+            const cat = categorias.find((c) => c.nombre === data.categoria);
+            categoria_id = cat ? cat.id : "";
+          }
+          if (!cancelado) {
             setProducto({
               ...data,
               imagenes: imagenesNormalizadas,
@@ -92,16 +103,19 @@ export default function ProductEditPage({ modo = "editar" }) {
               estado: data.estado ?? data.estado ?? "activo",
               nombre: data.nombre ?? data.nombre ?? "",
             });
-          } else {
-            setError("No se pudo cargar el producto.");
           }
-        } catch {
-          setError("Error de red.");
+        } else {
+          setError("No se pudo cargar el producto.");
         }
+      } catch {
+        setError("Error de red.");
       }
-      fetchProducto();
     }
-  }, [id, token, modo, dispatch, categorias]);
+    fetchProducto();
+    return () => {
+      cancelado = true;
+    };
+  }, [id, modo, categorias, categoriasCargadas, dispatch]);
 
   useEffect(() => {
     if (
@@ -181,11 +195,13 @@ export default function ProductEditPage({ modo = "editar" }) {
             ? 0
             : producto.ventas_totales,
       };
-      const res =
-        modo === "crear"
-          ? dispatch(createProducto(body))
-          : dispatch(updateProducto({ id: producto.id, data: body }));
-      if (res.status === 200) {
+      let res;
+      if (modo === "crear") {
+        res = await dispatch(createProducto({ data: body, token }));
+      } else {
+        res = await dispatch(updateProducto({ id: producto.id, data: body, token }));
+      }
+      if (res && res.meta && res.meta.requestStatus === "fulfilled") {
         setSuccess(
           modo === "crear"
             ? "Producto creado correctamente."
