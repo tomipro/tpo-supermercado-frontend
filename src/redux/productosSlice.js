@@ -92,6 +92,7 @@ const productosSlice = createSlice({
   name: "productos",
   initialState: {
     productos: [],
+    productoDetalle: null,      // <--- Agregá esto
     loading: false,
     error: "",
   },
@@ -113,6 +114,20 @@ const productosSlice = createSlice({
       .addCase(fetchProductos.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload;
+      })
+      .addCase(fetchProductoById.pending, (state) => {
+        state.loading = true;
+        state.error = "";
+        state.productoDetalle = null;
+      })
+      .addCase(fetchProductoById.fulfilled, (state, action) => {
+        state.loading = false;
+        state.productoDetalle = action.payload;
+      })
+      .addCase(fetchProductoById.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload;
+        state.productoDetalle = null;
       });
   },
 });

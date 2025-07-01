@@ -1,10 +1,10 @@
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
-import { fetchCarrito } from "../redux/cartSlice";
 import { motion, AnimatePresence } from "framer-motion";
 import { useSelector, useDispatch } from "react-redux";
+import { fetchProductoById } from "../redux/productosSlice";
+import { patchCarrito, fetchCarrito } from "../redux/cartSlice";
 
-// Simulación de productos con más detalles
 const destacados = [
   {
     name: "Manzana Roja",
@@ -128,54 +128,110 @@ export default function ProductDetailPage() {
   const navigate = useNavigate();
   const token = useSelector((state) => state.auth.token);
   const dispatch = useDispatch();
-  const [product, setProduct] = useState(null);
-  const [mainImgIdx, setMainImgIdx] = useState(0);
+
+  // Para agregar al carrito
   const [qty, setQty] = useState(1);
-  const [loading, setLoading] = useState(true);
   const [addCartLoading, setAddCartLoading] = useState(false);
   const [addCartMsg, setAddCartMsg] = useState("");
   const [added, setAdded] = useState(false);
   const [units, setUnits] = useState(0);
 
+  // Redux: datos del producto (solo por id)
+  const producto = useSelector((state) => state.productos.productoDetalle);
+  const loadingProducto = useSelector((state) => state.productos.loading);
+  const errorProducto = useSelector((state) => state.productos.error);
+
+  // Fetch producto desde redux si hay ID
   useEffect(() => {
-    setLoading(true);
     if (id) {
-      fetch(`http://localhost:4040/producto/id/${id}`)
-        .then((res) => {
-          if (!res.ok) throw new Error("No encontrado");
-          return res.json();
-        })
-        .then((data) => {
-          // Si el backend devuelve null, undefined o un objeto vacío, muestra "no encontrado"
-          if (
-            !data ||
-            typeof data !== "object" ||
-            Object.keys(data).length === 0
-          ) {
-            setProduct(null);
-          } else {
-            setProduct(data);
-          }
-          setMainImgIdx(0);
-          setQty(1);
-          setLoading(false);
-        })
-        .catch(() => {
-          setProduct(null);
-          setLoading(false);
-        });
-    } else if (slug) {
-      const found = destacados.find((p) => slugify(p.name) === slug);
-      setProduct(found || null);
-      setMainImgIdx(0);
-      setQty(1);
-      setLoading(false);
-    } else {
-      setProduct(null);
-      setLoading(false);
+      dispatch(fetchProductoById(id));
     }
     // eslint-disable-next-line
-  }, [slug, id]);
+  }, [id, dispatch]);
+
+  // Decide: producto real (redux)
+  const product = id
+    ? producto
+    : slug
+    ? destacados.find((p) => slugify(p.name) === slug)
+    : null;
+  const loading = id ? loadingProducto : false;
+  const error = id ? errorProducto : "";
+
+  // Unifica imágenes
+  const images =
+    (Array.isArray(product?.imagenes)
+      ? product.imagenes.map((img) =>
+          typeof img === "string" ? img : img?.imagen || img?.url || ""
+        )
+      : []) ||
+    (Array.isArray(product?.img) && product.img) ||
+    [];
+  const [mainImgIdx, setMainImgIdx] = useState(0);
+  useEffect(() => setMainImgIdx(0), [product]);
+  const mainImg = images[mainImgIdx] || FALLBACK_IMG;
+
+  // Unifica campos
+  const nombre = product?.nombre || product?.name || "";
+  const descripcion = product?.descripcion || product?.description || "";
+  const marca = product?.marca || product?.brand || "";
+  const precio = product?.precio ?? product?.price ?? "";
+  const peso = product?.unidad_medida || product?.weight || "";
+  const descuento = product?.descuento ?? product?.offer ?? "";
+  const bestSeller = product?.bestSeller;
+  const categoriaObj = product?.categoria || {};
+  const subcategoriaObj = product?.subcategoria || {};
+  const categoriaNombre =
+    (typeof categoriaObj === "string" && categoriaObj) ||
+    categoriaObj.nombre ||
+    product?.category ||
+    "";
+  const subcategoriaNombre =
+    (typeof subcategoriaObj === "string" && subcategoriaObj) ||
+    subcategoriaObj.nombre ||
+    product?.subcategory ||
+    "";
+  const stock = product?.stock ?? 0;
+  const sku = product?.sku || product?.codigo || "";
+  const origen = product?.origen || product?.origin || "";
+  const ingredientes = product?.ingredientes || product?.ingredients || "";
+
+  // Productos relacionados:
+  const relacionados = destacados
+    .filter(
+      (p) =>
+        p.category === (product?.category || product?.categoria?.nombre) &&
+        p.name !== (product?.name || product?.nombre)
+    )
+    .slice(0, 3);
+
+  function handlePrevImg() {
+    setMainImgIdx((idx) => (idx - 1 + images.length) % images.length);
+  }
+  function handleNextImg() {
+    setMainImgIdx((idx) => (idx + 1) % images.length);
+  }
+
+  // Agregar al carrito usando redux thunk
+  async function handleAddToCart() {
+    if (!product?.id || !qty) return;
+    setAddCartLoading(true);
+    setAddCartMsg("");
+    try {
+      await dispatch(
+        patchCarrito({ token, productoId: product.id, cantidad: qty })
+      );
+      await dispatch(fetchCarrito(token));
+      setAddCartMsg("Producto agregado al carrito.");
+      setUnits(units + qty);
+      setAdded(true);
+      setTimeout(() => setAdded(false), 1200);
+    } catch {
+      setAddCartMsg("No se pudo agregar al carrito.");
+    }
+    setAddCartLoading(false);
+    setTimeout(() => setAddCartMsg(""), 2000);
+  }
 
   // Skeleton loading UI
   if (loading) {
@@ -219,91 +275,6 @@ export default function ProductDetailPage() {
         </button>
       </div>
     );
-  }
-
-  // Unifica imágenes
-  const images =
-    (Array.isArray(product.imagenes)
-      ? product.imagenes.map((img) =>
-          // Si img es string, úsalo. Si es objeto, busca .imagen o .url
-          typeof img === "string" ? img : img?.imagen || img?.url || ""
-        )
-      : []) ||
-    (Array.isArray(product.img) && product.img) ||
-    [];
-
-  const mainImg = images[mainImgIdx] || FALLBACK_IMG;
-
-  // Unifica campos
-  const nombre = product.nombre || product.name || "";
-  const descripcion = product.descripcion || product.description || "";
-  const marca = product.marca || product.brand || "";
-  const precio = product.precio ?? product.price ?? "";
-  const peso = product.unidad_medida || product.weight || "";
-  const descuento = product.descuento ?? product.offer ?? "";
-  const bestSeller = product.bestSeller;
-  // Mejorar obtención de categoría y subcategoría
-  const categoriaObj = product.categoria || {};
-  const subcategoriaObj = product.subcategoria || {};
-  const categoriaNombre =
-    (typeof categoriaObj === "string" && categoriaObj) ||
-    categoriaObj.nombre ||
-    product.category ||
-    "";
-  const subcategoriaNombre =
-    (typeof subcategoriaObj === "string" && subcategoriaObj) ||
-    subcategoriaObj.nombre ||
-    product.subcategory ||
-    "";
-  const stock = product.stock ?? 0;
-  const sku = product.sku || product.codigo || "";
-  const origen = product.origen || product.origin || "";
-  const ingredientes = product.ingredientes || product.ingredients || "";
-
-  const relacionados = destacados
-    .filter(
-      (p) =>
-        p.category === (product.category || product.categoria?.nombre) &&
-        p.name !== (product.name || product.nombre)
-    )
-    .slice(0, 3);
-
-  function handlePrevImg() {
-    setMainImgIdx((idx) => (idx - 1 + images.length) % images.length);
-  }
-  function handleNextImg() {
-    setMainImgIdx((idx) => (idx + 1) % images.length);
-  }
-
-  async function handleAddToCart() {
-    if (!product?.id || !qty) return;
-    setAddCartLoading(true);
-    setAddCartMsg("");
-    try {
-      const res = await fetch(
-        `http://localhost:4040/carritos/${product.id}?cantidad=${qty}`,
-        {
-          method: "PATCH",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
-      if (res.ok) {
-        setAddCartMsg("Producto agregado al carrito.");
-        await dispatch(fetchCarrito(token));
-        setUnits(units + qty);
-        setAdded(true);
-        setTimeout(() => setAdded(false), 1200);
-      } else {
-        setAddCartMsg("No se pudo agregar al carrito.");
-      }
-    } catch {
-      setAddCartMsg("No se pudo agregar al carrito.");
-    }
-    setAddCartLoading(false);
-    setTimeout(() => setAddCartMsg(""), 2000);
   }
 
   return (
