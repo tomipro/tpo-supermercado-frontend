@@ -30,6 +30,22 @@ export const fetchProductos = createAsyncThunk(
   }
 );
 
+
+// Traer un producto por su ID
+export const fetchProductoById = createAsyncThunk(
+  "productos/fetchProductoById",
+  async (id, { rejectWithValue }) => {
+    try {
+      const res = await axios.get(`http://localhost:4040/producto/id/${id}`);
+      if (res.status !== 200) throw new Error("No se pudo cargar el producto.");
+      return res.data; // Un solo producto
+    } catch (e) {
+      return rejectWithValue(e.message || "Error al cargar producto.");
+    }
+  }
+);
+
+
 export const deleteProducto = createAsyncThunk(
   "productos/deleteProducto",
   async (id, { rejectWithValue }) => {

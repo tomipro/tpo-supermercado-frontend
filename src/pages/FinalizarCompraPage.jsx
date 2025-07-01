@@ -6,14 +6,17 @@ import StepComprobante from "./StepComprobante";
 import { AnimatePresence } from "framer-motion";
 import { useSelector, useDispatch } from "react-redux";
 import { fetchCarrito } from "../redux/cartSlice";
+import { fetchDirecciones } from "../redux/direccionesSlice";
+import { crearOrden, clearOrdenMsg } from "../redux/ordenesSlice";
+import { fetchProductoById } from "../redux/productosSlice";
 
 export default function FinalizarCompraPage() {
   const dispatch = useDispatch();
   const carrito = useSelector((state) => state.cart.carrito);
   const token = useSelector((state) => state.auth.token);
+  const direcciones = useSelector((state) => state.direcciones.direcciones);
 
   // Estados principales del flujo de compra
-  const [direcciones, setDirecciones] = useState([]); // Direcciones guardadas del usuario
   const [direccionId, setDireccionId] = useState(""); // Dirección seleccionada para envío
   const [envio, setEnvio] = useState(false); // true si se elige envío a domicilio
   const [card, setCard] = useState({
@@ -21,44 +24,34 @@ export default function FinalizarCompraPage() {
     name: "",
     expiry: "",
     cvv: "",
-  }); // Estado de los campos de la tarjeta de crédito
+  });
   const [loading, setLoading] = useState(false); // Carga/espera al pagar
   const [msg, setMsg] = useState(""); // Mensaje de éxito
   const [error, setError] = useState(""); // Mensaje de error
   const [orden, setOrden] = useState(null); // Orden generada al finalizar compra
   const [imagenesProductos, setImagenesProductos] = useState({}); // Imagen de cada producto del carrito
   const [step, setStep] = useState(1); // Step actual del flujo (1: entrega, 2: pago, 3: comprobante)
-  const [cancelTimeout, setCancelTimeout] = useState(null); // Permite cancelar el pago mientras está "procesando"
+  const [cancelTimeout, setCancelTimeout] = useState(null);
 
-  /**
-   * Carga las direcciones guardadas del usuario al cargar el componente o si cambia el token.
-   */
+  console.log("TOKEN:", token);
+  // Carga las direcciones
   useEffect(() => {
-    fetch("http://localhost:4040/direcciones", {
-      headers: { Authorization: `Bearer ${token}` },
-    })
-      .then((res) => res.json())
-      .then((data) => setDirecciones(data))
-      .catch(() => setError("No se pudieron cargar las direcciones"));
-  }, [token]);
-
-  /**
-   * Carga el carrito del usuario logueado al cargar el componente o si cambia el token.
-   */
-  useEffect(() => {
-    if (token) dispatch(fetchCarrito(token));
-    // eslint-disable-next-line
+    if (token) dispatch(fetchDirecciones(token));
   }, [token, dispatch]);
 
-  /**
-   * Por cada producto del carrito, obtiene la imagen (si no la tiene ya) para mostrar en el resumen.
-   */
+  // Carga el carrito
+  useEffect(() => {
+    if (token) dispatch(fetchCarrito(token));
+  }, [token, dispatch]);
+
+  // Por cada producto del carrito, obtiene la imagen (si no la tiene ya)
   useEffect(() => {
     if (!carrito || !carrito.items) return;
+
     carrito.items.forEach((item) => {
       if (!imagenesProductos[item.productoId]) {
-        fetch(`http://localhost:4040/producto/id/${item.productoId}`)
-          .then((res) => (res.ok ? res.json() : null))
+        dispatch(fetchProductoById(item.productoId))
+          .unwrap()
           .then((data) => {
             if (data && data.imagenes && data.imagenes.length > 0) {
               setImagenesProductos((prev) => ({
@@ -71,15 +64,12 @@ export default function FinalizarCompraPage() {
       }
     });
     // eslint-disable-next-line
-  }, [carrito]);
+  }, [carrito, dispatch]);
 
-  /**
-   * Calcula el total final de la compra (sumando $2000 si hay envío).
-   */
+  // Calcula el total final de la compra (sumando $2000 si hay envío).
   const calcularTotal = () => {
     if (!carrito || !Array.isArray(carrito.items) || carrito.items.length === 0)
       return 0;
-    // Sumar subtotales de los items si carrito.total no es válido
     let total = 0;
     if (typeof carrito.total === "number" && !isNaN(carrito.total)) {
       total = carrito.total;
@@ -101,9 +91,7 @@ export default function FinalizarCompraPage() {
     return envio ? total + 2000 : total;
   };
 
-  /**
-   * Maneja la selección de método de entrega. Si elige envío y tiene direcciones, avanza al paso 2.
-   */
+  // Maneja la selección de método de entrega. Si elige envío y tiene direcciones, avanza al paso 2.
   const handleSeleccionMetodo = (tipo) => {
     if (tipo === "retiro") {
       setEnvio(false);
@@ -115,9 +103,7 @@ export default function FinalizarCompraPage() {
     }
   };
 
-  /**
-   * Realiza el "pago" (simula espera). Cuando termina, genera la orden y pasa al comprobante.
-   */
+  // Realiza el pago
   const handlePagar = async (e) => {
     e.preventDefault();
     setLoading(true);
@@ -125,19 +111,10 @@ export default function FinalizarCompraPage() {
     setMsg("");
     const timeout = setTimeout(async () => {
       try {
-        const body = envio ? { direccionId } : {};
-        const res = await fetch("http://localhost:4040/ordenes", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify(body),
-        });
-        if (!res.ok) throw new Error("No se pudo finalizar la compra");
-        const ordenGenerada = await res.json();
+        const ordenGenerada = await dispatch(
+          crearOrden({ token, direccionId: envio ? direccionId : undefined })
+        ).unwrap();
 
-        // Si es envío, agregar la dirección seleccionada al objeto orden para mostrarla en el comprobante
         let direccionElegida = null;
         if (envio && direccionId && Array.isArray(direcciones)) {
           direccionElegida = direcciones.find(
@@ -171,9 +148,7 @@ export default function FinalizarCompraPage() {
     setCancelTimeout(timeout);
   };
 
-  /**
-   * Permite cancelar el pago si está "procesando".
-   */
+  // Permite cancelar el pago si está "procesando".
   const cancelarPago = () => {
     clearTimeout(cancelTimeout);
     setLoading(false);

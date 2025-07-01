@@ -5,6 +5,7 @@ import direccionesReducer from "./redux/direccionesSlice";
 import usuarioReducer from "./redux/usuarioSlice";
 import authReducer from "./redux/authSlice";
 import productosReducer from "./redux/productosSlice";
+import ordenesReducer from "./redux/ordenesSlice";
 
 const store = configureStore({
   reducer: {
@@ -14,6 +15,8 @@ const store = configureStore({
     direcciones: direccionesReducer,
     usuario: usuarioReducer,
     productos: productosReducer,
+    ordenes: ordenesReducer,
+
   },
 });
 

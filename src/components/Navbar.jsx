@@ -3,10 +3,9 @@ import { useState, useEffect, useRef, useMemo } from "react";
 import { useSelector, useDispatch } from "react-redux";
 import { fetchCategorias } from "../redux/categoriesSlice";
 import { logoutThunk } from "../redux/authSlice";
-import { fetchCarrito } from "../redux/cartSlice";
+import { fetchCarrito, resetCarrito } from "../redux/cartSlice";
 import DolarCotizacion from "../components/DolarCotizacion";
 import dinoLogo from "../assets/dino_logo.png";
-
 
 export default function Navbar() {
   const [open, setOpen] = useState(false);
@@ -94,10 +93,7 @@ export default function Navbar() {
   useEffect(() => {
     if (!dropdown) return;
     function handleClickOutside(e) {
-      if (
-        dropdownRef.current &&
-        !dropdownRef.current.contains(e.target)
-      ) {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
         setDropdown(null);
       }
     }
@@ -555,6 +551,7 @@ export default function Navbar() {
                       onClick={() => {
                         setUserDropdown(false);
                         dispatch(logoutThunk());
+                        dispatch(resetCarrito());
                       }}
                       className="block w-full text-left px-4 py-2 text-red-600 hover:bg-red-50 hover:text-red-700 rounded transition font-semibold"
                     >

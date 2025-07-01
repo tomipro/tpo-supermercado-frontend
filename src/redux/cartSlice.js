@@ -15,6 +15,7 @@ export const fetchCarrito = createAsyncThunk(
   }
 );
 
+
 // Sumar/restar cantidad
 export const patchCarrito = createAsyncThunk(
   "cart/patchCarrito",
@@ -68,7 +69,13 @@ const cartSlice = createSlice({
     loading: false,
     error: null,
   },
-  reducers: {},
+  reducers: {
+    resetCarrito(state) {
+      state.carrito = { items: [], total: 0 };
+      state.loading = false;
+      state.error = null;
+    },
+  },
   extraReducers: (builder) => {
     builder
       .addCase(fetchCarrito.pending, (state) => {
@@ -88,4 +95,5 @@ const cartSlice = createSlice({
   },
 });
 
+export const { resetCarrito } = cartSlice.actions;
 export default cartSlice.reducer;
