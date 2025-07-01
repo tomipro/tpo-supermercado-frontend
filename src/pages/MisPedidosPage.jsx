@@ -1,56 +1,21 @@
 import { Link } from "react-router-dom";
-import { useEffect, useState } from "react";
-import { useSelector } from "react-redux";
+import { useEffect } from "react";
+import { useSelector, useDispatch } from "react-redux";
+import { fetchOrdenesUsuario } from "../redux/ordenesSlice";
 
 export default function MisPedidosPage() {
   const token = useSelector((state) => state.auth.token);
   const usuario = useSelector((state) => state.auth.usuario);
-  const [pedidos, setPedidos] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
+  const pedidos = useSelector((state) => state.ordenes.pedidos);
+  const loading = useSelector((state) => state.ordenes.loading);
+  const error = useSelector((state) => state.ordenes.error);
+  const dispatch = useDispatch();
 
   useEffect(() => {
-    setLoading(true);
-    setError("");
-    if (!usuario || !usuario.id) {
-      setError("No se pudo obtener el usuario.");
-      setLoading(false);
-      return;
+    if (token && usuario && usuario.id) {
+      dispatch(fetchOrdenesUsuario({ token, usuarioId: usuario.id }));
     }
-    fetch(`http://localhost:4040/ordenes/usuarios/${usuario.id}`, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    })
-      .then((res) => {
-        if (!res.ok) throw new Error("No se pudieron cargar los pedidos.");
-        return res.json();
-      })
-      .then((data) => {
-        let pedidosData = [];
-
-        // Obtener el array de pedidos
-        if (Array.isArray(data)) pedidosData = data;
-        else if (data && Array.isArray(data.content))
-          pedidosData = data.content;
-
-        // Ordenar los pedidos por fecha (más nuevo primero)
-        const pedidosOrdenados = pedidosData.sort((a, b) => {
-          const fechaA = a.fechaCreacion || a.fecha;
-          const fechaB = b.fechaCreacion || b.fecha;
-
-          // Convertir a timestamp para comparar
-          const timeA = new Date(fechaA).getTime();
-          const timeB = new Date(fechaB).getTime();
-
-          return timeB - timeA; // Orden descendente (más nuevo primero)
-        });
-
-        setPedidos(pedidosOrdenados);
-      })
-      .catch((err) => setError(err.message || "Error al cargar pedidos."))
-      .finally(() => setLoading(false));
-  }, [token, usuario]);
+  }, [token, usuario?.id, dispatch]);
 
   return (
     <div className="max-w-3xl mx-auto mt-10">

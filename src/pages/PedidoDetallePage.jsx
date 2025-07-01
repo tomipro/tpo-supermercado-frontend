@@ -1,40 +1,24 @@
 import { useParams, Link, useNavigate } from "react-router-dom";
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import jsPDF from "jspdf";
 import html2canvas from "html2canvas";
-import { useAuth } from "../auth/AuthProvider";
-import { useSelector } from "react-redux";
+import { useSelector, useDispatch } from "react-redux";
+import { fetchPedidoPorId } from "../redux/ordenesSlice";
 
 export default function PedidoDetallePage() {
+  const pedido = useSelector((state) => state.ordenes.pedido);
+  const loading = useSelector((state) => state.ordenes.loading);
+  const error = useSelector((state) => state.ordenes.error);
+  const usuario = useSelector((state) => state.auth.usuario);
+  const token = useSelector((state) => state.auth.token);
+  const dispatch = useDispatch();
   const { id } = useParams();
   const navigate = useNavigate();
-  const token = useSelector((state) => state.auth.token);
-  const usuario = useSelector((state) => state.auth.usuario);
-  const [pedido, setPedido] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
 
   useEffect(() => {
-    setLoading(true);
-    setError("");
-    if (!usuario || !usuario.id) {
-      setError("No se pudo obtener el usuario.");
-      setLoading(false);
-      return;
-    }
-    fetch(`http://localhost:4040/ordenes/${id}/usuarios/${usuario.id}`, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    })
-      .then((res) => {
-        if (!res.ok) throw new Error("No se pudo cargar el pedido.");
-        return res.json();
-      })
-      .then((data) => setPedido(data))
-      .catch((err) => setError(err.message || "Error al cargar el pedido."))
-      .finally(() => setLoading(false));
-  }, [id, token, usuario]);
+    if (!usuario || !usuario.id) return;
+    dispatch(fetchPedidoPorId({ token, usuarioId: usuario.id, pedidoId: id }));
+  }, [id, token, usuario, dispatch]);
 
   const handleDownloadPDF = async () => {
     const input = document.getElementById("pedido-detalle-pdf");
@@ -42,14 +26,11 @@ export default function PedidoDetallePage() {
     window.scrollTo(0, 0);
     await new Promise((resolve) => setTimeout(resolve, 200));
 
-    // Clonar el nodo
     const clone = input.cloneNode(true);
 
-    // Función para limpiar estilos problemáticos
+    // Limpia clases problemáticas de Tailwind (opcional, si te da problemas el PDF)
     const cleanStyles = (node) => {
       if (node.nodeType === 1) {
-        // Solo elementos HTML
-        // Limpiar estilos inline con oklch
         if (node.hasAttribute("style")) {
           const style = node.getAttribute("style");
           if (style && style.includes("oklch")) {
@@ -59,8 +40,6 @@ export default function PedidoDetallePage() {
             );
           }
         }
-
-        // Limpiar clases de Tailwind que puedan usar oklch
         if (node.hasAttribute("class")) {
           const classes = node.getAttribute("class").split(" ");
           const filtered = classes.filter(
@@ -74,21 +53,14 @@ export default function PedidoDetallePage() {
           );
           node.setAttribute("class", filtered.join(" "));
         }
-
-        // Limpiar atributos de color directos
         if (node.hasAttribute("color")) {
           node.removeAttribute("color");
         }
-
-        // Procesar hijos recursivamente
         Array.from(node.children).forEach(cleanStyles);
       }
     };
-
-    // Limpiar el clon
     cleanStyles(clone);
 
-    // Limpiar etiquetas <style>
     Array.from(clone.querySelectorAll("style")).forEach((styleTag) => {
       styleTag.innerHTML = styleTag.innerHTML
         .replace(/oklch\([^)]+\)/g, "rgb(0, 0, 0)")
@@ -96,7 +68,6 @@ export default function PedidoDetallePage() {
         .replace(/background-color:[^;]+;/g, "background-color: #fff;");
     });
 
-    // Crear un contenedor temporal fuera de pantalla
     const tempDiv = document.createElement("div");
     tempDiv.style.position = "fixed";
     tempDiv.style.left = "-9999px";
@@ -106,16 +77,12 @@ export default function PedidoDetallePage() {
     tempDiv.appendChild(clone);
     document.body.appendChild(tempDiv);
 
-    // Configuración mejorada para html2canvas
     const options = {
       scale: 2,
       useCORS: true,
       backgroundColor: "#ffffff",
       logging: false,
-      ignoreElements: (element) => {
-        // Ignorar elementos específicos si es necesario
-        return false;
-      },
+      ignoreElements: (element) => false,
     };
 
     try {
@@ -176,7 +143,6 @@ export default function PedidoDetallePage() {
     }
   };
 
-  // Resto del componente permanece igual
   if (loading)
     return (
       <div className="max-w-xl mx-auto mt-20 p-8 bg-white rounded shadow text-center">
