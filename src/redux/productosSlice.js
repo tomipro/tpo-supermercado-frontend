@@ -23,7 +23,8 @@ export const fetchProductos = createAsyncThunk(
       const res = await axios.get(url);
       if (res.status !== 200) throw new Error("No se pudieron cargar los productos.");
       const data = res.data;
-      return Array.isArray(data.content) ? data.content : [];
+      // Devuelve el objeto completo, no solo el array
+      return data;
     } catch (e) {
       return rejectWithValue(e.message || "Error al cargar productos.");
     }
@@ -109,7 +110,22 @@ const productosSlice = createSlice({
       })
       .addCase(fetchProductos.fulfilled, (state, action) => {
         state.loading = false;
-        state.productos = action.payload;
+        // Si viene paginado, guarda el array y los datos extra
+        if (action.payload && Array.isArray(action.payload.content)) {
+          state.productos = action.payload.content;
+          state.paginacion = {
+            totalPages: action.payload.totalPages,
+            totalElements: action.payload.totalElements,
+            page: action.payload.page,
+            size: action.payload.size,
+          };
+        } else if (Array.isArray(action.payload)) {
+          state.productos = action.payload;
+          state.paginacion = undefined;
+        } else {
+          state.productos = [];
+          state.paginacion = undefined;
+        }
       })
       .addCase(fetchProductos.rejected, (state, action) => {
         state.loading = false;

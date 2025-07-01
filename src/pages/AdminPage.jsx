@@ -162,10 +162,10 @@ export default function AdminPage() {
       setError("");
       try {
         // 1. Traer todos los usuarios (con token)
-        const usuariosRes = await dispatch(fetchUsuarios());
-        if (!usuariosRes.status === 200)
+        const usuariosRes = await dispatch(fetchUsuarios(token));
+        if (usuariosRes.meta.requestStatus !== "fulfilled")
           throw new Error("No autorizado o error al cargar usuarios.");
-        const usuarios = usuariosRes.data;
+        const usuarios = usuariosRes.payload;
         if (!Array.isArray(usuarios) || usuarios.length === 0) {
           setVentasPorDia([]);
           setVentasPorMes([]);
@@ -178,14 +178,14 @@ export default function AdminPage() {
         const ordenesPorUsuario = await Promise.all(
           usuarios.map(async (u) => {
             try {
+              // Cambia la ruta aquí si tu backend usa /ordenes/usuarios/:id
               const r = await axios.get(
-                `http://localhost:4040/usuarios/${u.id}/ordenes`,
+                `http://localhost:4040/ordenes/usuarios/${u.id}`,
                 {
                   headers: { Authorization: `Bearer ${token}` },
                 }
               );
               if (r.status !== 200) return [];
-              // Si la respuesta es vacía o error 500, devolver []
               let data = null;
               try {
                 data = r.data;
@@ -203,7 +203,6 @@ export default function AdminPage() {
         // 3. Unir todas las órdenes en un solo array
         const todasLasOrdenes = ordenesPorUsuario.flat().filter(Boolean);
         setTotalOrdenes(todasLasOrdenes.length);
-        // Si no hay órdenes, evitar errores en los gráficos
         if (!Array.isArray(todasLasOrdenes) || todasLasOrdenes.length === 0) {
           setVentasPorDia([]);
           setVentasPorMes([]);
@@ -234,11 +233,13 @@ export default function AdminPage() {
         setLoading(false);
       }
     }
-    async function fetchProductos() {
+    async function fetchProductos2() {
       try {
         const res = await dispatch(fetchProductos());
-        const data = res.data;
-        const productos = Array.isArray(data.content)
+        // Redux Toolkit: el resultado está en res.payload
+        const data = res.payload;
+        // Usa el array de productos según la estructura de la respuesta
+        const productos = Array.isArray(data?.content)
           ? data.content
           : Array.isArray(data)
           ? data
@@ -262,7 +263,7 @@ export default function AdminPage() {
       }
     }
     fetchVentas();
-    fetchProductos();
+    fetchProductos2();
   }, [dispatch, token]);
 
   return (
