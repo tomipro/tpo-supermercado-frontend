@@ -1,7 +1,7 @@
 import { Link } from "react-router-dom";
 import { useState, useEffect } from "react";
 import ProductCard from "../components/ProductCard";
-import promoBannerImg from "../assets/banner2.jpeg";
+import promoBannerImg from "../assets/dino-fanta.jpeg";
 import promoBannerImg2 from "../assets/banner3.jpg";
 import promoBannerImg4 from "../assets/banner4.webp";
 import { useDispatch, useSelector } from "react-redux";
@@ -35,10 +35,10 @@ export default function HomePage() {
     setBanners([
       {
         img: promoBannerImg,
-        title: "¡Super Ofertas de la Semana!",
-        desc: 'Encontra descuentos exclusivos en cientos de productos filtrando por "En promoción".',
-        cta: "Explorar promociones",
-        to: "/buscar",
+        // title: "¡Super Ofertas de la Semana!",
+        // desc: 'Encontra descuentos exclusivos en cientos de productos filtrando por "En promoción".',
+        // cta: "Explorar promociones",
+        // to: "/buscar",
       },
       { img: promoBannerImg2 },
       { img: promoBannerImg4 },

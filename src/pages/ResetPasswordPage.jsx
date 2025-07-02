@@ -1,5 +1,12 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useDispatch, useSelector } from "react-redux";
+import {
+  verificarEmailThunk,
+  cambiarPasswordThunk,
+  clearAuthError,
+} from "../redux/authSlice";
+
 export default function ResetPasswordPage() {
   const [email, setEmail] = useState("");
   const [nuevaContrasena, setNuevaContrasena] = useState("");
@@ -7,55 +14,35 @@ export default function ResetPasswordPage() {
   const [mensaje, setMensaje] = useState("");
   const [error, setError] = useState("");
   const navigate = useNavigate();
+  const dispatch = useDispatch();
+  const { loading, error: authError } = useSelector((state) => state.auth);
 
   const verificarEmail = async () => {
-    try {
-      const res = await fetch(
-        `http://localhost:4040/usuarios/exists/email/${encodeURIComponent(
-          email
-        )}`
-      );
-      const existe = await res.json();
-      if (existe) {
-        setEmailValidado(true);
-        setError("");
-      } else {
-        setError("No se encontró ningún usuario con ese correo.");
-      }
-    } catch (err) {
-      setError("Error al verificar el correo.");
-    }
+    dispatch(verificarEmailThunk(email))
+      .unwrap()
+      .then((existe) => {
+        if (existe) {
+          setEmailValidado(true);
+        } else {
+          setError("No se encontró ningún usuario con ese correo.");
+        }
+      })
+      .catch(() => setError("Error al verificar el correo."));
   };
 
   const cambiarContrasena = async () => {
-    try {
-      const res = await fetch(
-        `http://localhost:4040/usuarios/cambiar-password?email=${email}`,
-        {
-          method: "PUT",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ nuevaContrasena }),
-        }
+    dispatch(cambiarPasswordThunk({ email, nuevaContrasena }))
+      .unwrap()
+      .then((msg) => {
+        setMensaje(msg + " Serás redirigido al inicio de sesión en 5 segundos.");
+        setError("");
+        setTimeout(() => {
+          navigate("/signin");
+        }, 5000);
+      })
+      .catch((err) =>
+        setError(err?.message || "Error al cambiar la contraseña.")
       );
-
-      if (!res.ok) {
-        const text = await res.text();
-        throw new Error(text || "Error desconocido.");
-      }
-
-      const msg = await res.text();
-      setMensaje(msg + " Serás redirigido al inicio de sesión en 5 segundos.");
-      setError("");
-
-      // Redireccionar después de 5 segundos
-      setTimeout(() => {
-        navigate("/signin");
-      }, 5000);
-    } catch (err) {
-      setError(err.message);
-    }
   };
 
   return (
@@ -75,8 +62,9 @@ export default function ResetPasswordPage() {
           <button
             onClick={verificarEmail}
             className="w-full bg-blue-600 text-white p-2 rounded hover:bg-blue-700"
+            disabled={loading}
           >
-            Verificar correo
+            {loading ? "Verificando..." : "Verificar correo"}
           </button>
         </>
       ) : (
@@ -93,8 +81,9 @@ export default function ResetPasswordPage() {
           <button
             onClick={cambiarContrasena}
             className="w-full bg-green-600 text-white p-2 rounded hover:bg-green-700"
+            disabled={loading}
           >
-            Cambiar contraseña
+            {loading ? "Cambiando..." : "Cambiar contraseña"}
           </button>
         </>
       )}

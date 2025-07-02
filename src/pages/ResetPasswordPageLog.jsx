@@ -1,40 +1,31 @@
 import { useState } from "react";
-import { useSelector } from "react-redux";
+import { useSelector, useDispatch } from "react-redux";
+import { cambiarPasswordLogThunk, clearAuthError } from "../redux/authSlice";
 
 export default function ResetPasswordPageLog() {
   const token = useSelector((state) => state.auth.token);
+  const dispatch = useDispatch();
+  const { loading, error } = useSelector((state) => state.auth);
   const [oldPassword, setOldPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [msg, setMsg] = useState("");
-  const [error, setError] = useState("");
 
   const handleChangePassword = async (e) => {
     e.preventDefault();
     setMsg("");
-    setError("");
-    try {
-      const res = await fetch("http://localhost:4040/usuarios/password", {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          contrasenaActual: oldPassword,
-          nuevaContrasena: newPassword,
-        }),
-      });
-      const text = await res.text();
-      if (res.ok) {
+    dispatch(
+      cambiarPasswordLogThunk({
+        token,
+        contrasenaActual: oldPassword,
+        nuevaContrasena: newPassword,
+      })
+    )
+      .unwrap()
+      .then((text) => {
         setMsg(text || "Contraseña cambiada correctamente.");
         setOldPassword("");
         setNewPassword("");
-      } else {
-        setError(text || "Error al cambiar la contraseña.");
-      }
-    } catch (err) {
-      setError("Error de red.");
-    }
+      });
   };
 
   return (
@@ -60,8 +51,9 @@ export default function ResetPasswordPageLog() {
         <button
           type="submit"
           className="w-full bg-blue-600 text-white p-2 rounded hover:bg-blue-700"
+          disabled={loading}
         >
-          Cambiar contraseña
+          {loading ? "Cambiando..." : "Cambiar contraseña"}
         </button>
       </form>
       {msg && (

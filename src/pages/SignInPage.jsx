@@ -73,8 +73,9 @@ export default function SignInPage() {
         <button
           type="submit"
           className="login-button bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 font-bold rounded-md w-full transition mt-2"
+          disabled={loading}
         >
-          Iniciar sesión
+          {loading ? "Ingresando..." : "Iniciar sesión"}
         </button>
         {error && (
           <div className="bg-red-100 text-red-700 p-2 rounded mt-3">

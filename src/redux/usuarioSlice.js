@@ -34,10 +34,13 @@ export const fetchUsuarios = createAsyncThunk(
 // Editar perfil de usuario
 export const updatePerfil = createAsyncThunk(
   "usuario/updatePerfil",
-  async ({ token, formData }, { rejectWithValue }) => {
+  async ({ token, formData }, { getState, rejectWithValue }) => {
     try {
-      const res = await fetch("http://localhost:4040/usuarios/perfil", {
-        method: "PUT",
+      const state = getState();
+      const userId = state.auth?.usuario?.id;
+      if (!userId) throw new Error("No se encontró el usuario autenticado.");
+      const res = await fetch(`http://localhost:4040/usuarios/${userId}`, {
+        method: "PATCH",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,

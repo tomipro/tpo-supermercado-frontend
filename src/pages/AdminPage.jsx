@@ -178,7 +178,6 @@ export default function AdminPage() {
         const ordenesPorUsuario = await Promise.all(
           usuarios.map(async (u) => {
             try {
-              // Cambia la ruta aquí si tu backend usa /ordenes/usuarios/:id
               const r = await axios.get(
                 `http://localhost:4040/ordenes/usuarios/${u.id}`,
                 {

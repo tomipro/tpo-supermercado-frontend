@@ -219,6 +219,7 @@ export default function BuscarPage() {
 
   const [page, setPage] = useState(0);
   const [pageSize, setPageSize] = useState(12);
+  const [allProductsForBrands, setAllProductsForBrands] = useState([]); // <-- Agregar esto
   // Usá Redux para cargar categorías al montar
   useEffect(() => {
     dispatch(fetchCategorias());
@@ -386,10 +387,45 @@ export default function BuscarPage() {
     // eslint-disable-next-line
   }, [allPromoProducts, productosRedux, pageSize, promo, paginacion]);
 
+  // Fetch ALL products (solo para marcas) al montar
+  useEffect(() => {
+    let cancelled = false;
+    async function fetchAllProducts() {
+      let all = [];
+      let currentPage = 0;
+      let totalPagesBackend = 1;
+      while (currentPage < totalPagesBackend && !cancelled) {
+        const res = await dispatch(
+          fetchProductos({
+            page: currentPage,
+            size: 100, // traer muchos por página para menos requests
+          })
+        );
+        const data = res.payload;
+        let productos = [];
+        if (data && Array.isArray(data.content)) {
+          productos = data.content;
+          totalPagesBackend = data.totalPages || 1;
+        } else if (Array.isArray(data)) {
+          productos = data;
+          totalPagesBackend = 1;
+        }
+        all = all.concat(productos);
+        currentPage++;
+      }
+      if (!cancelled) setAllProductsForBrands(all);
+    }
+    fetchAllProducts();
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line
+  }, [dispatch]);
+
   // Nuevo useEffect para recalcular marcas disponibles
   useEffect(() => {
     const marcasSet = new Set();
-    productosRedux.forEach((p) => {
+    allProductsForBrands.forEach((p) => {
       if (p.marca && typeof p.marca === "string" && p.marca.trim() !== "") {
         marcasSet.add(p.marca.trim());
       }
@@ -397,7 +433,7 @@ export default function BuscarPage() {
     setMarcasDisponibles(
       Array.from(marcasSet).sort((a, b) => a.localeCompare(b))
     );
-  }, [productosRedux]);
+  }, [allProductsForBrands]);
 
   function handleMarcaChange(marca) {
     setMarcas((marcas) =>
