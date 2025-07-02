@@ -11,6 +11,181 @@ import { patchCarrito, fetchCarrito } from "../redux/cartSlice";
 
 const FALLBACK_IMG = "https://cdn-icons-png.flaticon.com/512/1046/1046857.png";
 
+
+function ProductQuickView({ product, onClose, onAddToCart }) {
+  const [qty, setQty] = useState(1);
+  const [added, setAdded] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [units, setUnits] = useState(0);
+  const dispatch = useDispatch(); // <--- agrega esto
+  const token = useSelector((state) => state.auth.token); // <--- Agrega esto
+
+  useEffect(() => {
+    setQty(1);
+    setAdded(false);
+    setUnits(0);
+  }, [product]);
+
+  useEffect(() => {
+    if (!product) return;
+    const handler = (e) => {
+      if (e.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [onClose, product]);
+
+  if (!product) return null;
+
+  const stock = product.stock ?? 0;
+  const description = product.descripcion || product.description || "";
+  const price = product.precio ?? product.price;
+  const name = product.nombre ?? product.name;
+  const brand = product.marca ?? product.brand;
+  const img =
+    (product.imagenes &&
+      Array.isArray(product.imagenes) &&
+      product.imagenes[0]?.imagen) ||
+    (product.imagenes &&
+      Array.isArray(product.imagenes) &&
+      typeof product.imagenes[0] === "string" &&
+      product.imagenes[0]) ||
+    product.imagenUrl ||
+    product.img;
+
+  function handleBgClick(e) {
+    if (e.target === e.currentTarget) onClose();
+  }
+
+  // Cambia handleAdd para llamar a dispatch directamente si onAddToCart no funciona
+  const handleAdd = async () => {
+    if (!product?.id || !token) return;
+    setLoading(true);
+    // Usa onAddToCart si está, si no, usa dispatch directo
+    if (onAddToCart) {
+      await onAddToCart(product.id, qty);
+    } else {
+      await dispatch(patchCarrito({ token, productoId: product.id, cantidad: qty }));
+      await dispatch(fetchCarrito(token));
+    }
+    setAdded(true);
+    setUnits(units + qty);
+    setLoading(false);
+    setTimeout(() => setAdded(false), 1200);
+  };
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm animate-fade-in"
+      onClick={handleBgClick}
+      aria-modal="true"
+      role="dialog"
+    >
+      <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full p-0 relative flex flex-col md:flex-row overflow-hidden">
+        <div className="flex-1 flex items-center justify-center bg-gray-50 p-6 md:p-8">
+          {img ? (
+            <img
+              src={img}
+              alt={name}
+              className="w-40 h-40 md:w-56 md:h-56 object-cover rounded-xl shadow-lg transition-transform duration-300 hover:scale-105"
+              draggable={false}
+            />
+          ) : (
+            <div className="w-40 h-40 md:w-56 md:h-56 bg-gray-100 rounded-xl shadow-lg flex items-center justify-center text-5xl">
+              🛒
+            </div>
+          )}
+        </div>
+        <div className="flex-1 flex flex-col p-6 md:p-8">
+          <button
+            className="absolute top-3 right-3 text-gray-400 hover:text-primary text-2xl font-bold"
+            onClick={onClose}
+            aria-label="Cerrar"
+            tabIndex={0}
+          >
+            ×
+          </button>
+          <div className="flex items-center gap-2 mb-2">
+            <span className="font-bold text-xl text-dark">{name}</span>
+            {product.descuento > 0 && (
+              <span className="bg-accent text-dark text-xs font-bold px-2 py-0.5 rounded-full shadow">
+                {product.descuento}% OFF
+              </span>
+            )}
+          </div>
+          <div className="text-sm text-muted mb-1">{brand}</div>
+          <div className="text-primary font-bold text-2xl mb-1">${price}</div>
+          <div className="text-xs text-gray-400 mb-3">
+            Precio sin impuestos nacionales: $
+            {price ? Math.round(price / 1.21) : 0}
+          </div>
+          <div className="text-gray-600 text-sm mb-4">{description}</div>
+          <div className="flex items-center gap-3 mb-4">
+            <span className="text-xs font-medium text-secondary">En stock</span>
+          </div>
+          <div className="flex items-center gap-2 mb-6">
+            <label htmlFor="qty" className="text-sm text-gray-700">
+              Cantidad:
+            </label>
+            <input
+              id="qty"
+              type="number"
+              min={1}
+              max={stock}
+              value={qty}
+              onChange={(e) =>
+                setQty(Math.max(1, Math.min(stock, Number(e.target.value))))
+              }
+              className="w-16 px-2 py-1 border border-gray-200 rounded text-center focus:ring-2 focus:ring-primary"
+            />
+          </div>
+          <button
+            className={`bg-primary text-white font-semibold px-6 py-3 rounded-lg shadow transition text-base w-full flex items-center justify-center gap-2 relative
+							${added ? "bg-green-600" : "hover:bg-secondary"}
+							${loading ? "opacity-70 cursor-not-allowed" : ""}
+						`}
+            onClick={handleAdd}
+            disabled={loading || !token} // <--- deshabilita si no hay token
+            title={!token ? "Debés iniciar sesión para agregar al carrito" : undefined}
+          >
+            {added ? (
+              <span className="inline-flex items-center gap-1">
+                <svg
+                  className="w-4 h-4 text-white"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth={2.5}
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M5 13l4 4L19 7"
+                  />
+                </svg>
+                ¡Agregado!
+              </span>
+            ) : loading ? (
+              "Agregando..."
+            ) : (
+              <>
+                <span>Agregar al carrito</span>
+                <span className="font-bold">×{qty}</span>
+              </>
+            )}
+            {units > 0 && (
+              <span className="absolute right-3 bottom-2 bg-blue-100 text-blue-700 text-xs px-2 py-0.5 rounded-full font-bold pointer-events-none">
+                x{units}
+              </span>
+            )}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+// --- Fin ProductQuickView ---
+
 export default function HomePage() {
   const dispatch = useDispatch();
   const token = useSelector((state) => state.auth.token);
@@ -60,7 +235,7 @@ export default function HomePage() {
   const categoriesMapped = Array.isArray(categorias)
     ? categorias.map((c) => ({
         name: c.nombre,
-        to: `/buscar?categoriaId=${c.id}`,
+        to: `/buscar?categoriaId=${c.id}`, // <-- Asegura que el link tenga categoriaId
         img:
           (c.productos && c.productos[0]?.imagenes?.[0]?.imagen) ||
           FALLBACK_IMG,
